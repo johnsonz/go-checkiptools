@@ -1,0 +1,16 @@
+{
+    "concurrency":3,
+    "timeout":1200,
+    "organization":[
+        "Google Inc"
+    ],
+    "gws":[
+        "google.com"
+    ],
+    "gvs":[
+        "*.c.docs.google.com",
+        "*.googlevideo.com"
+    ],
+    "sort_tmpokfile":true,
+    "check_last_okip":true
+}
