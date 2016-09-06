@@ -1,6 +1,7 @@
 {
     "concurrency":3,
     "timeout":1200,
+    "ipdelay":1200,
     "organization":[
         "Google Inc"
     ],

@@ -26,6 +26,7 @@ import (
 type Config struct {
 	Concurrency     int      `json:"concurrency"`
 	TimeOut         int      `json:"timeout"`
+	IPDelay         int      `json:"ipdelay"`
 	OrgNames        []string `json:"organization"`
 	GwsDomains      []string `json:"gws"`
 	GvsDomains      []string `json:"gvs"`
@@ -127,10 +128,18 @@ func main() {
 	}
 	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
 	utils.CheckErr(err)
+	var gaip, gpip string
 	for _, uniqueIP := range uniqueIPs {
 		writeIPFile(uniqueIP, tmpOkIPFileName)
+		if uniqueIP.timeDelay <= config.IPDelay {
+			gaip += uniqueIP.address + "|"
+			gpip += "\"" + uniqueIP.address + "\","
+		}
 	}
 
+	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
+		[]byte(gaip+"\n"+gpip), os.ModeAppend)
+	utils.CheckErr(err)
 	fmt.Printf("time: %fs%s", t1.Sub(t0).Seconds(), separator)
 }
 
