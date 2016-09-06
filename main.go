@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"checkip/utils"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -16,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/johnsonz/go-checkiptools/utils"
 
 	"github.com/golang/glog"
 )
