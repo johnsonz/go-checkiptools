@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,8 +29,8 @@ type Config struct {
 	OrgNames        []string `json:"organization"`
 	GwsDomains      []string `json:"gws"`
 	GvsDomains      []string `json:"gvs"`
-	IsSort          bool     `json:"sort_tmpokfile"`
-	IsCehckLastOKIP bool     `json:"check_last_okip"`
+	IsSortOkIP      bool     `json:"sort_tmpokfile"`
+	IsCehckLastOkIP bool     `json:"check_last_okip"`
 }
 
 //The IP struct
@@ -59,6 +60,8 @@ const (
 	okIPFileName     string = "ip.txt"
 )
 
+type IPs []IP
+
 var config Config
 var curDir string
 var separator string
@@ -68,6 +71,7 @@ var tlsConfig *tls.Config
 var dialer net.Dialer
 
 func init() {
+
 	fmt.Println("loading...")
 	if runtime.GOOS == "windows" {
 		separator = "\r\n"
@@ -117,6 +121,15 @@ func main() {
 		<-done
 	}
 	t1 := time.Now()
+	uniqueIPs := getUniqueIP()
+	if config.IsSortOkIP {
+		sort.Sort(IPs(uniqueIPs))
+	}
+	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
+	utils.CheckErr(err)
+	for _, uniqueIP := range uniqueIPs {
+		writeIPFile(uniqueIP, tmpOkIPFileName)
+	}
 
 	fmt.Printf("time: %fs%s", t1.Sub(t0).Seconds(), separator)
 }
@@ -278,8 +291,8 @@ func writeIPFile(checkedip IP, file string) {
 	f, err := os.OpenFile(filepath.Join(curDir, file), os.O_APPEND,
 		os.ModeAppend)
 	utils.CheckErr(err)
-	_, err = f.WriteString(fmt.Sprintf("%-15s %-7s %-3s %-s %-s%s",
-		checkedip.address, strconv.Itoa(checkedip.timeDelay)+"ms", checkedip.serverName,
+	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %-s %-s%s",
+		checkedip.address, checkedip.timeDelay, checkedip.serverName,
 		checkedip.commonName, checkedip.countryName, separator))
 	utils.CheckErr(err)
 	defer f.Close()
@@ -317,3 +330,44 @@ func inc(ip net.IP) {
 		}
 	}
 }
+
+func getUniqueIP() []IP {
+	m := make(map[string]IP)
+	var ips []IP
+	var ip IP
+	bytes, err := ioutil.ReadFile(filepath.Join(curDir, tmpOkIPFileName))
+	utils.CheckErr(err)
+	lines := strings.Split(string(bytes), separator)
+	lines = lines[:len(lines)-1]
+	for _, line := range lines {
+		ipInfo := strings.Split(line, " ")
+
+		timed, _ := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
+		if len(ipInfo) == 5 {
+			ip = IP{
+				address:     ipInfo[0],
+				timeDelay:   timed,
+				commonName:  ipInfo[2],
+				serverName:  ipInfo[3],
+				countryName: ipInfo[4],
+			}
+		} else {
+			ip = IP{
+				address:    ipInfo[0],
+				timeDelay:  timed,
+				commonName: ipInfo[2],
+				serverName: ipInfo[3],
+			}
+
+		}
+		m[ipInfo[0]] = ip
+	}
+	for _, value := range m {
+		ips = append(ips, value)
+	}
+	return ips
+}
+
+func (ips IPs) Len() int           { return len(ips) }
+func (ips IPs) Swap(i, j int)      { ips[i], ips[j] = ips[j], ips[i] }
+func (ips IPs) Less(i, j int) bool { return ips[i].timeDelay < ips[j].timeDelay }
