@@ -129,9 +129,10 @@ func main() {
 	for i := 0; i < config.Concurrency; i++ {
 		<-done
 	}
-	writeOkIP()
+	total, gws, gvs := writeOkIP()
 	t1 := time.Now()
-	fmt.Printf("%stime: %fs%s", separator, t1.Sub(t0).Seconds(), separator)
+	fmt.Printf("%stime: %fs, ok ip count: %d(gws: %d, gvs: %d), %s", separator,
+		t1.Sub(t0).Seconds(), total, gws, gvs, separator)
 }
 
 //cacert.pem
@@ -213,6 +214,7 @@ func doCheckIP(jobs chan string, done chan bool) {
 	}
 	done <- true
 }
+
 func checkIP(ip string) {
 	var checkedip IP
 	checkedip.address = ip
@@ -371,8 +373,9 @@ func getUniqueIP() []IP {
 writeOkIP sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
-func writeOkIP() {
+func writeOkIP() (total, gws, gvs int) {
 	uniqueIPs := getUniqueIP()
+	total = len(uniqueIPs)
 	if config.IsSortOkIP {
 		sort.Sort(IPs(uniqueIPs))
 	}
@@ -380,6 +383,12 @@ func writeOkIP() {
 	utils.CheckErr(err)
 	var gaipbuf, gpipbuf bytes.Buffer
 	for _, uniqueIP := range uniqueIPs {
+		if uniqueIP.serverName == "gws" {
+			gws++
+		}
+		if uniqueIP.serverName == "gvs" {
+			gvs++
+		}
 		writeIPFile(uniqueIP, tmpOkIPFileName)
 		if uniqueIP.timeDelay <= config.IPDelay {
 			gaipbuf.WriteString(uniqueIP.address)
@@ -401,6 +410,8 @@ func writeOkIP() {
 	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
 		[]byte(gaip+"\n"+gpip), 0755)
 	utils.CheckErr(err)
+
+	return total, gws, gvs
 }
 
 func (ips IPs) Len() int           { return len(ips) }
