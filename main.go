@@ -102,8 +102,16 @@ func main() {
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
-	ips := getAllGoogleIP()
 
+	var ips []string
+	var lastOkIPs []IP
+	if config.IsCehckLastOkIP {
+		lastOkIPs = getUniqueIP()
+	}
+	for _, lastOkIP := range lastOkIPs {
+		ips = append(ips, lastOkIP.address)
+	}
+	ips = append(ips, getAllGoogleIP()...)
 	fmt.Printf("Load google ip ok,line: %d, load default ip: %d%s",
 		len(parseGoogleIP(readGoogleIP())), len(ips), separator)
 
@@ -118,15 +126,12 @@ func main() {
 	for i := 0; i < config.Concurrency; i++ {
 		go doCheckIP(jobs, done)
 	}
-	for range done {
+	for i := 0; i < config.Concurrency; i++ {
 		<-done
 	}
-
 	writeOkIP()
-
 	t1 := time.Now()
-
-	fmt.Printf("time: %fs%s", t1.Sub(t0).Seconds(), separator)
+	fmt.Printf("%stime: %fs%s", separator, t1.Sub(t0).Seconds(), separator)
 }
 
 //cacert.pem
@@ -205,9 +210,8 @@ func getAllGoogleIP() []string {
 func doCheckIP(jobs chan string, done chan bool) {
 	for job := range jobs {
 		checkIP(job)
-		done <- true
 	}
-	close(done)
+	done <- true
 }
 func checkIP(ip string) {
 	var checkedip IP
@@ -286,11 +290,11 @@ func writeIPFile(checkedip IP, file string) {
 	f, err := os.OpenFile(filepath.Join(curDir, file), os.O_APPEND,
 		os.ModeAppend)
 	utils.CheckErr(err)
+	defer f.Close()
 	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %-s %-s%s",
 		checkedip.address, checkedip.timeDelay, checkedip.serverName,
 		checkedip.commonName, checkedip.countryName, separator))
 	utils.CheckErr(err)
-	defer f.Close()
 }
 
 //Whether file exists.
