@@ -136,9 +136,14 @@ func main() {
 			gpip += "\"" + uniqueIP.address + "\","
 		}
 	}
-
+	if len(gaip) > 0 {
+		gaip = gaip[:len(gaip)-1]
+	}
+	if len(gpip) > 0 {
+		gpip = gpip[:len(gpip)-1]
+	}
 	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
-		[]byte(gaip+"\n"+gpip), os.ModeAppend)
+		[]byte(gaip+"\n"+gpip), 0755)
 	utils.CheckErr(err)
 	fmt.Printf("time: %fs%s", t1.Sub(t0).Seconds(), separator)
 }
