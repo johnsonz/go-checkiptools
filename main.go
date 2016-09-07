@@ -374,14 +374,20 @@ func writeOkIP() {
 	}
 	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
 	utils.CheckErr(err)
-	var gaip, gpip string
+	var gaipbuf, gpipbuf bytes.Buffer
 	for _, uniqueIP := range uniqueIPs {
 		writeIPFile(uniqueIP, tmpOkIPFileName)
 		if uniqueIP.timeDelay <= config.IPDelay {
-			gaip += uniqueIP.address + "|"
-			gpip += "\"" + uniqueIP.address + "\","
+			gaipbuf.WriteString(uniqueIP.address)
+			gaipbuf.WriteString("|")
+			gpipbuf.WriteString("\"")
+			gpipbuf.WriteString(uniqueIP.address)
+			gpipbuf.WriteString("\"")
 		}
 	}
+	gaip := gaipbuf.String()
+	gpip := gpipbuf.String()
+
 	if len(gaip) > 0 {
 		gaip = gaip[:len(gaip)-1]
 	}
