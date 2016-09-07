@@ -24,4 +24,4 @@ _testmain.go
 *.prof
 
 *tmp*
-googleip.txt
+*.txt
