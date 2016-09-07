@@ -73,7 +73,6 @@ var dialer net.Dialer
 
 func init() {
 
-	fmt.Println("loading...")
 	if runtime.GOOS == "windows" {
 		separator = "\r\n"
 	} else {
@@ -112,7 +111,7 @@ func main() {
 		ips = append(ips, lastOkIP.address)
 	}
 	ips = append(ips, getAllGoogleIP()...)
-	fmt.Printf("Load google ip ok,line: %d, load default ip: %d%s",
+	fmt.Printf("load google ip ok,line: %d, load default ip: %d%s",
 		len(parseGoogleIP(readGoogleIP())), len(ips), separator)
 
 	t0 := time.Now()
@@ -131,8 +130,11 @@ func main() {
 	}
 	total, gws, gvs := writeOkIP()
 	t1 := time.Now()
-	fmt.Printf("%stime: %fs, ok ip count: %d(gws: %d, gvs: %d), %s", separator,
+	fmt.Printf("%stime: %fs, ok ip count: %d(gws: %d, gvs: %d) %s", separator,
 		t1.Sub(t0).Seconds(), total, gws, gvs, separator)
+
+	fmt.Println("press any key to continue...")
+	fmt.Scanln()
 }
 
 //cacert.pem
