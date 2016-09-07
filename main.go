@@ -382,7 +382,7 @@ func writeOkIP() {
 			gaipbuf.WriteString("|")
 			gpipbuf.WriteString("\"")
 			gpipbuf.WriteString(uniqueIP.address)
-			gpipbuf.WriteString("\"")
+			gpipbuf.WriteString("\",")
 		}
 	}
 	gaip := gaipbuf.String()
