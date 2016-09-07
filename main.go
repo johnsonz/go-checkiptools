@@ -121,30 +121,11 @@ func main() {
 	for range done {
 		<-done
 	}
+
+	writeOkIP()
+
 	t1 := time.Now()
-	uniqueIPs := getUniqueIP()
-	if config.IsSortOkIP {
-		sort.Sort(IPs(uniqueIPs))
-	}
-	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
-	utils.CheckErr(err)
-	var gaip, gpip string
-	for _, uniqueIP := range uniqueIPs {
-		writeIPFile(uniqueIP, tmpOkIPFileName)
-		if uniqueIP.timeDelay <= config.IPDelay {
-			gaip += uniqueIP.address + "|"
-			gpip += "\"" + uniqueIP.address + "\","
-		}
-	}
-	if len(gaip) > 0 {
-		gaip = gaip[:len(gaip)-1]
-	}
-	if len(gpip) > 0 {
-		gpip = gpip[:len(gpip)-1]
-	}
-	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
-		[]byte(gaip+"\n"+gpip), 0755)
-	utils.CheckErr(err)
+
 	fmt.Printf("time: %fs%s", t1.Sub(t0).Seconds(), separator)
 }
 
@@ -380,6 +361,36 @@ func getUniqueIP() []IP {
 		ips = append(ips, value)
 	}
 	return ips
+}
+
+/**
+writeOkIP sorting ip, ridding duplicate ip, generating json ip and
+bar-separated ip
+*/
+func writeOkIP() {
+	uniqueIPs := getUniqueIP()
+	if config.IsSortOkIP {
+		sort.Sort(IPs(uniqueIPs))
+	}
+	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
+	utils.CheckErr(err)
+	var gaip, gpip string
+	for _, uniqueIP := range uniqueIPs {
+		writeIPFile(uniqueIP, tmpOkIPFileName)
+		if uniqueIP.timeDelay <= config.IPDelay {
+			gaip += uniqueIP.address + "|"
+			gpip += "\"" + uniqueIP.address + "\","
+		}
+	}
+	if len(gaip) > 0 {
+		gaip = gaip[:len(gaip)-1]
+	}
+	if len(gpip) > 0 {
+		gpip = gpip[:len(gpip)-1]
+	}
+	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
+		[]byte(gaip+"\n"+gpip), 0755)
+	utils.CheckErr(err)
 }
 
 func (ips IPs) Len() int           { return len(ips) }
