@@ -168,7 +168,11 @@ func readGoogleIP() []byte {
 
 //Convert google ip from []byte to []string
 func parseGoogleIP(bytes []byte) []string {
-	return strings.Split(string(bytes), separator)
+	ipRanges := strings.Split(string(bytes), separator)
+	if ipRanges[len(ipRanges)-1] == "" {
+		return ipRanges[:len(ipRanges)-1]
+	}
+	return ipRanges
 }
 
 /**
@@ -204,7 +208,6 @@ func parseGoogleIPRange(ipRange string) []string {
 //Get all parsed goole ip
 func getAllGoogleIP() []string {
 	ipRanges := parseGoogleIP(readGoogleIP())
-	ipRanges = ipRanges[:len(ipRanges)-1]
 	var ips []string
 	for _, ipRange := range ipRanges {
 		ips = append(ips, parseGoogleIPRange(ipRange)...)
