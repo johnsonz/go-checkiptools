@@ -24,14 +24,15 @@ import (
 
 //Config Get config info from extra config.json file.
 type Config struct {
-	Concurrency     int      `json:"concurrency"`
-	TimeOut         int      `json:"timeout"`
-	IPDelay         int      `json:"ipdelay"`
-	OrgNames        []string `json:"organization"`
-	GwsDomains      []string `json:"gws"`
-	GvsDomains      []string `json:"gvs"`
-	IsSortOkIP      bool     `json:"sort_tmpokfile"`
-	IsCehckLastOkIP bool     `json:"check_last_okip"`
+	Concurrency      int      `json:"concurrency"`
+	TimeOut          int      `json:"timeout"`
+	IPDelay          int      `json:"ipdelay"`
+	OrgNames         []string `json:"organization"`
+	GwsDomains       []string `json:"gws"`
+	GvsDomains       []string `json:"gvs"`
+	IsSortOkIP       bool     `json:"sort_tmpokfile"`
+	IsCheckLastOkIP  bool     `json:"check_last_okip"`
+	IsCheckBandwidth bool     `json:"check_bandwidth"`
 }
 
 //The IP struct
@@ -104,7 +105,7 @@ func main() {
 
 	var ips []string
 	var lastOkIPs []IP
-	if config.IsCehckLastOkIP {
+	if config.IsCheckLastOkIP {
 		lastOkIPs = getUniqueIP()
 	}
 	for _, lastOkIP := range lastOkIPs {
@@ -133,7 +134,7 @@ func main() {
 	fmt.Printf("%stime: %fs, ok ip count: %d(gws: %d, gvs: %d) %s", separator,
 		t1.Sub(t0).Seconds(), total, gws, gvs, separator)
 
-	fmt.Println("press any key to continue...")
+	fmt.Println("press 'Enter' to continue...")
 	fmt.Scanln()
 }
 

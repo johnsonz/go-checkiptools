@@ -13,5 +13,6 @@
         "*.googlevideo.com"
     ],
     "sort_tmpokfile":true,
-    "check_last_okip":true
+    "check_last_okip":true,
+    "check_bandwidth":false
 }
