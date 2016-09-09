@@ -112,7 +112,7 @@ func main() {
 		ips = append(ips, lastOkIP.address)
 	}
 	ips = append(ips, getAllGoogleIP()...)
-	fmt.Printf("load google ip ok,line: %d, load default ip: %d%s",
+	fmt.Printf("load google ip ok,line(s): %d, load default ip: %d%s",
 		len(parseGoogleIP(readGoogleIP())), len(ips), separator)
 
 	t0 := time.Now()
@@ -300,9 +300,10 @@ func writeIPFile(checkedip IP, file string) {
 	utils.CheckErr(err)
 	defer f.Close()
 	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %-s %-s%s",
-		checkedip.address, checkedip.timeDelay, checkedip.serverName,
-		checkedip.commonName, checkedip.countryName, separator))
+		checkedip.address, checkedip.timeDelay, checkedip.commonName,
+		checkedip.serverName, checkedip.countryName, separator))
 	utils.CheckErr(err)
+	f.Close()
 }
 
 //Whether file exists.
@@ -348,7 +349,6 @@ func getUniqueIP() []IP {
 	lines = lines[:len(lines)-1]
 	for _, line := range lines {
 		ipInfo := strings.Split(line, " ")
-
 		timed, _ := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
 		if len(ipInfo) == 5 {
 			ip = IP{
