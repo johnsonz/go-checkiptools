@@ -1,7 +1,7 @@
 {
-    "concurrency":30,
-    "timeout":1200,
-    "ipdelay":1200,
+    "concurrency":1000,
+    "timeout":5000,
+    "delay":1200,
     "organization":[
         "Google Inc"
     ],
@@ -14,7 +14,9 @@
     ],
     "sort_tmpokfile":true,
     "check_last_okip":true,
-    "check_bandwidth":false,
-    "bandwidth_concurrency":3,
-    "bandwidth_timeout":5000
+    "check_bandwidth":true,
+    "sort_bandwidth":true,
+    "bandwidth_concurrency":10,
+    "bandwidth_timeout":5000,
+    "check_http2":false
 }

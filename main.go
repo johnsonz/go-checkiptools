@@ -5,53 +5,32 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
-	"runtime"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
-
-	"github.com/johnsonz/go-checkiptools/utils"
-
-	"github.com/golang/glog"
 )
 
 //Config Get config info from extra config.json file.
 type Config struct {
-	Concurrency      int      `json:"concurrency"`
-	TimeOut          int      `json:"timeout"`
-	IPDelay          int      `json:"ipdelay"`
-	OrgNames         []string `json:"organization"`
-	GwsDomains       []string `json:"gws"`
-	GvsDomains       []string `json:"gvs"`
-	IsSortOkIP       bool     `json:"sort_tmpokfile"`
-	IsCheckLastOkIP  bool     `json:"check_last_okip"`
-	IsCheckBandwidth bool     `json:"check_bandwidth"`
+	Concurrency          int      `json:"concurrency"`
+	Timeout              int      `json:"timeout"`
+	Delay                int      `json:"delay"`
+	OrgNames             []string `json:"organization"`
+	GwsDomains           []string `json:"gws"`
+	GvsDomains           []string `json:"gvs"`
+	SortOkIP             bool     `json:"sort_tmpokfile"`
+	CheckLastOkIP        bool     `json:"check_last_okip"`
+	CheckBandwidth       bool     `json:"check_bandwidth"`
+	SortBandwidth        bool     `json:"sort_bandwidth"`
+	BandwidthConcurrency int      `json:"bandwidth_concurrency"`
+	BandwidthTimeout     int      `json:"bandwidth_timeout"`
 }
 
-//The IP struct
-type IP struct {
-	address     string
-	countryName string
-	commonName  string
-	orgName     string
-	serverName  string
-	timeDelay   int
-	bandwidth   int
-}
-
-// The status of type IP
-const (
-	okIP = iota
-	noIP
-	errIP
-)
 const (
 	configFileName   string = "config.json"
 	certFileName     string = "cacert.pem"
@@ -59,10 +38,8 @@ const (
 	tmpOkIPFileName  string = "ip_tmpok.txt"
 	tmpErrIPFileName string = "ip_tmperr.txt"
 	tmpNoIPFileName  string = "ip_tmpno.txt"
-	okIPFileName     string = "ip.txt"
+	jsonIPFileName   string = "ip.txt"
 )
-
-type IPs []IP
 
 var config Config
 var curDir string
@@ -73,48 +50,36 @@ var tlsConfig *tls.Config
 var dialer net.Dialer
 
 func init() {
-
-	if runtime.GOOS == "windows" {
-		separator = "\r\n"
-	} else {
-		separator = "\n"
-	}
-	curDir, err = filepath.Abs(filepath.Dir(os.Args[0]))
-	utils.CheckErr(err)
-	parseConfig(curDir)
+	parseConfig()
 	loadCertPem()
 
 	tlsConfig = &tls.Config{
 		RootCAs:            certPool,
 		InsecureSkipVerify: true,
 	}
-	dialer = net.Dialer{
-		Timeout:   time.Millisecond * time.Duration(config.TimeOut),
-		KeepAlive: 0,
-		DualStack: false,
-	}
 }
+
 func main() {
 
 	flag.Set("logtostderr", "true")
 	flag.Parse()
-	createFile()
+
+	var lastOkIPs []string
+	if config.CheckLastOkIP {
+		tmpLastOkIPs := getLastOkIP()
+		for _, ip := range tmpLastOkIPs {
+			lastOkIPs = append(lastOkIPs, ip.Address)
+		}
+	}
+
+	ips := append(lastOkIPs, getGoogleIP()...)
+
+	fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
+	time.Sleep(80 * 1000)
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
-
-	var ips []string
-	var lastOkIPs []IP
-	if config.IsCheckLastOkIP {
-		lastOkIPs = getUniqueIP()
-	}
-	for _, lastOkIP := range lastOkIPs {
-		ips = append(ips, lastOkIP.address)
-	}
-	ips = append(ips, getAllGoogleIP()...)
-	fmt.Printf("load google ip ok,line(s): %d, load default ip: %d%s",
-		len(parseGoogleIP(readGoogleIP())), len(ips), separator)
-
+	//check all goole ip begin
 	t0 := time.Now()
 	go func() {
 		for _, ip := range ips {
@@ -122,285 +87,177 @@ func main() {
 		}
 		close(jobs)
 	}()
+	for ip := range jobs {
+		done <- true
+		go checkIP(ip, done)
+	}
+	for i := 0; i < cap(done); i++ {
+		done <- true
+	}
 
-	for i := 0; i < config.Concurrency; i++ {
-		go doCheckIP(jobs, done)
-	}
-	for i := 0; i < config.Concurrency; i++ {
-		<-done
-	}
-	total, gws, gvs := writeOkIP()
+	total, gws, gvs := writeJSONIP2File()
 	t1 := time.Now()
-	fmt.Printf("%stime: %fs, ok ip count: %d(gws: %d, gvs: %d) %s", separator,
-		t1.Sub(t0).Seconds(), total, gws, gvs, separator)
+	delay := int(t1.Sub(t0).Seconds())
+	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", delay, total, gws, gvs)
+	//check all goole ip end
 
 	fmt.Println("press 'Enter' to continue...")
 	fmt.Scanln()
 }
 
-//cacert.pem
-func loadCertPem() {
-	certpem, err := ioutil.ReadFile(filepath.Join(curDir, certFileName))
-	utils.CheckErr(err)
+//Parse config file
+func parseConfig() {
+	conf, err := ioutil.ReadFile(configFileName)
+	checkErr("read config file error: ", err, Info)
+	err = json.Unmarshal(conf, &config)
+	checkErr("parse config file error: ", err, Info)
+}
 
+//Load cacert.pem
+func loadCertPem() {
+	certpem, err := ioutil.ReadFile(certFileName)
+	checkErr(fmt.Sprintf("read pem file %s error: ", certFileName), err, Info)
 	certPool = x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(certpem) {
-		glog.Fatalf("Load %s error.\n", certFileName)
+		checkErr(fmt.Sprintf("load pem file %s error: ", certFileName), errors.New("load pem file error"), Info)
 	}
 }
 
-//Parse config file
-func parseConfig(dir string) {
-
-	conf, err := ioutil.ReadFile(filepath.Join(dir, configFileName))
-	utils.CheckErr(err)
-	err = json.Unmarshal(conf, &config)
-	utils.CheckErr(err)
-
-}
-
-//Read google ip from googleip.txt
-func readGoogleIP() []byte {
-	bytes, err := ioutil.ReadFile(filepath.Join(curDir, googleIPFileName))
-	utils.CheckErr(err)
-	return bytes
-}
-
-//Convert google ip from []byte to []string
-func parseGoogleIP(bytes []byte) []string {
-	ipRanges := strings.Split(string(bytes), separator)
-	if ipRanges[len(ipRanges)-1] == "" {
-		return ipRanges[:len(ipRanges)-1]
-	}
-	return ipRanges
-}
-
-/**
-  Parse google ip range, support the following formats:
-  1. xxx.xxx.xxx.xxx
-  2. xxx.xxx.xxx.xxx/xx
-  3. xxx.xxx.xxx.xxx-xxx.xxx.xxx.xxx
-*/
-func parseGoogleIPRange(ipRange string) []string {
-	var ips []string
-	if strings.Contains(ipRange, "/") {
-		//CIDR: https://zh.wikipedia.org/wiki/%E6%97%A0%E7%B1%BB%E5%88%AB%E5%9F%9F%E9%97%B4%E8%B7%AF%E7%94%B1
-		ip, ipNet, err := net.ParseCIDR(ipRange)
-		utils.CheckErr(err)
-		for iptmp := ip.Mask(ipNet.Mask); ipNet.Contains(iptmp); inc(iptmp) {
-			ips = append(ips, iptmp.String())
-		}
-		// remove network address and broadcast address
-		return ips[1 : len(ips)-1]
-	} else if strings.Contains(ipRange, "-") {
-		startIP := net.ParseIP(ipRange[:strings.Index(ipRange, "-")])
-		endIP := net.ParseIP(ipRange[strings.Index(ipRange, "-")+1:])
-
-		for ip := startIP; bytes.Compare(ip, endIP) <= 0; inc(ip) {
-			ips = append(ips, ip.String())
-		}
-	} else {
-		ips = append(ips, ipRange)
-	}
-	return ips
-}
-
-//Get all parsed goole ip
-func getAllGoogleIP() []string {
-	ipRanges := parseGoogleIP(readGoogleIP())
-	var ips []string
-	for _, ipRange := range ipRanges {
-		ips = append(ips, parseGoogleIPRange(ipRange)...)
-	}
-	return ips
-}
-func doCheckIP(jobs chan string, done chan bool) {
-	for job := range jobs {
-		checkIP(job)
-	}
-	done <- true
-}
-
-func checkIP(ip string) {
+func checkIP(ip string, done chan bool) {
+	defer func() {
+		<-done
+	}()
 	var checkedip IP
-	checkedip.address = ip
+	checkedip.Address = ip
+	checkedip.Bandwidth = -1
+
+	dialer = net.Dialer{
+		Timeout:   time.Millisecond * time.Duration(config.Timeout),
+		KeepAlive: 0,
+		DualStack: false,
+	}
 
 	conn, err := dialer.Dial("tcp", net.JoinHostPort(ip, "443"))
 	if err != nil {
-		glog.Infof("%s: %v%s", ip, err, separator)
-		writeIPFile(checkedip, tmpErrIPFileName)
+		checkErr(fmt.Sprintf("%s dial error: ", ip), err, Debug)
+		appendIP2File(checkedip, tmpErrIPFileName)
 		return
 	}
 	defer conn.Close()
 
 	t0 := time.Now()
 	tlsClient := tls.Client(conn, tlsConfig)
-	if err = tlsClient.Handshake(); err != nil {
-		glog.Infof("%s: %v%s", ip, err, separator)
-		writeIPFile(checkedip, tmpErrIPFileName)
+	err = tlsClient.Handshake()
+	if err != nil {
+		checkErr(fmt.Sprintf("%s handshake error: ", ip), err, Debug)
+		appendIP2File(checkedip, tmpErrIPFileName)
 		return
 	}
+	defer tlsClient.Close()
 	t1 := time.Now()
 
 	if tlsClient.ConnectionState().PeerCertificates == nil {
-		glog.Infof("%s: peer certificates error%s", ip, separator)
-		writeIPFile(checkedip, tmpNoIPFileName)
+		checkErr(fmt.Sprintf("%s peer certificates error: ", ip), errors.New("peer certificates is nil"), Debug)
+		appendIP2File(checkedip, tmpNoIPFileName)
 		return
 	}
 
-	checkedip.timeDelay = int(t1.Sub(t0).Seconds() * 1000)
+	checkedip.Delay = int(t1.Sub(t0).Seconds() * 1000)
 
 	peerCertSubject := tlsClient.ConnectionState().PeerCertificates[0].Subject
-	checkedip.commonName = peerCertSubject.CommonName
+	checkedip.CommonName = peerCertSubject.CommonName
 	orgNames := peerCertSubject.Organization
-	if len(orgNames) > 0 {
-		checkedip.orgName = orgNames[0]
+	if len(peerCertSubject.Organization) > 0 {
+		checkedip.OrgName = orgNames[0]
 	}
 	countryNames := peerCertSubject.Country
+	checkedip.CountryName = "-"
 	if len(countryNames) > 0 {
-		checkedip.countryName = countryNames[0]
+		checkedip.CountryName = countryNames[0]
 	}
 
 	for _, org := range config.OrgNames {
-		if org == checkedip.orgName {
+		if org == checkedip.OrgName {
 			var flag0, flag1 bool
 			for _, gws := range config.GwsDomains {
-				if gws == checkedip.commonName {
-					checkedip.serverName = "gws"
-					writeIPFile(checkedip, tmpOkIPFileName)
+				if gws == checkedip.CommonName {
+					checkedip.ServerName = "gws"
+					appendIP2File(checkedip, tmpOkIPFileName)
 					flag0 = true
 					break
 				}
 			}
 			if !flag0 {
 				for _, gvs := range config.GvsDomains {
-					if gvs == checkedip.commonName {
-						checkedip.serverName = "gvs"
-						writeIPFile(checkedip, tmpOkIPFileName)
+					if gvs == checkedip.CommonName {
+						checkedip.ServerName = "gvs"
+						appendIP2File(checkedip, tmpOkIPFileName)
 						flag1 = true
 						break
 					}
 				}
 			}
 			if !flag0 && !flag1 {
-				writeIPFile(checkedip, tmpNoIPFileName)
+				appendIP2File(checkedip, tmpNoIPFileName)
 			}
 		} else {
-			writeIPFile(checkedip, tmpNoIPFileName)
+			appendIP2File(checkedip, tmpNoIPFileName)
 		}
 	}
-	glog.Infof("%s: %s %s%s", checkedip.address, checkedip.commonName,
-		checkedip.serverName, separator)
+	checkErr(fmt.Sprintf("%s: %s %s %s %dms", checkedip.Address, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName,
+		checkedip.Delay), errors.New(""), Info)
 }
 
-//Write IP to corresponding file
-func writeIPFile(checkedip IP, file string) {
-	f, err := os.OpenFile(filepath.Join(curDir, file), os.O_APPEND,
-		os.ModeAppend)
-	utils.CheckErr(err)
+//append ip to related file
+func appendIP2File(checkedip IP, filename string) {
+	f, err := os.OpenFile(filename, os.O_APPEND, os.ModeAppend)
+	checkErr(fmt.Sprintf("open file %s error: ", filename), err, Error)
 	defer f.Close()
-	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %-s %-s%s",
-		checkedip.address, checkedip.timeDelay, checkedip.commonName,
-		checkedip.serverName, checkedip.countryName, separator))
-	utils.CheckErr(err)
+
+	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %s %s %dKB/s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName, checkedip.Bandwidth))
+	checkErr(fmt.Sprintf("append ip to file %s error: ", filename), err, Error)
 	f.Close()
 }
 
-//Whether file exists.
-func isFileExist(file string) bool {
-	_, err := os.Stat(file)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-//Create files if they donnot exist.
+//Create files if they donnot exist, or truncate them.
 func createFile() {
-	if !isFileExist(filepath.Join(curDir, tmpOkIPFileName)) {
-		_, err := os.Create(filepath.Join(curDir, tmpOkIPFileName))
-		utils.CheckErr(err)
-	}
-	if !isFileExist(filepath.Join(curDir, tmpNoIPFileName)) {
-		_, err := os.Create(filepath.Join(curDir, tmpNoIPFileName))
-		utils.CheckErr(err)
-	}
-	if !isFileExist(filepath.Join(curDir, tmpErrIPFileName)) {
-		_, err := os.Create(filepath.Join(curDir, tmpErrIPFileName))
-		utils.CheckErr(err)
-	}
-}
-func inc(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
-	}
-}
+	_, err := os.Create(tmpOkIPFileName)
+	checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
 
-func getUniqueIP() []IP {
-	m := make(map[string]IP)
-	var ips []IP
-	var ip IP
-	bytes, err := ioutil.ReadFile(filepath.Join(curDir, tmpOkIPFileName))
-	utils.CheckErr(err)
-	lines := strings.Split(string(bytes), separator)
-	lines = lines[:len(lines)-1]
-	for _, line := range lines {
-		ipInfo := strings.Split(line, " ")
-		timed, _ := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
-		if len(ipInfo) == 5 {
-			ip = IP{
-				address:     ipInfo[0],
-				timeDelay:   timed,
-				commonName:  ipInfo[2],
-				serverName:  ipInfo[3],
-				countryName: ipInfo[4],
-			}
-		} else {
-			ip = IP{
-				address:    ipInfo[0],
-				timeDelay:  timed,
-				commonName: ipInfo[2],
-				serverName: ipInfo[3],
-			}
+	_, err = os.Create(tmpNoIPFileName)
+	checkErr(fmt.Sprintf("create file %s error: ", tmpNoIPFileName), err, Error)
 
-		}
-		m[ipInfo[0]] = ip
-	}
-	for _, value := range m {
-		ips = append(ips, value)
-	}
-	return ips
+	_, err = os.Create(tmpErrIPFileName)
+	checkErr(fmt.Sprintf("create file %s error: ", tmpErrIPFileName), err, Error)
 }
 
 /**
-writeOkIP sorting ip, ridding duplicate ip, generating json ip and
+writeJSONIP2File: sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
-func writeOkIP() (total, gws, gvs int) {
-	uniqueIPs := getUniqueIP()
-	total = len(uniqueIPs)
-	if config.IsSortOkIP {
-		sort.Sort(IPs(uniqueIPs))
+func writeJSONIP2File() (total, gws, gvs int) {
+	okIPs := getLastOkIP()
+	total = len(getLastOkIP())
+	if config.SortOkIP {
+		sort.Sort(ByDelay{IPs(okIPs)})
 	}
-	err := os.Truncate(filepath.Join(curDir, tmpOkIPFileName), 0)
-	utils.CheckErr(err)
+	err := os.Truncate(tmpOkIPFileName, 0)
+	checkErr(fmt.Sprintf("truncate file %s error: ", tmpOkIPFileName), err, Error)
 	var gaipbuf, gpipbuf bytes.Buffer
-	for _, uniqueIP := range uniqueIPs {
-		if uniqueIP.serverName == "gws" {
+	for _, ip := range okIPs {
+		if ip.ServerName == "gws" {
 			gws++
 		}
-		if uniqueIP.serverName == "gvs" {
+		if ip.ServerName == "gvs" {
 			gvs++
 		}
-		writeIPFile(uniqueIP, tmpOkIPFileName)
-		if uniqueIP.timeDelay <= config.IPDelay {
-			gaipbuf.WriteString(uniqueIP.address)
+		appendIP2File(ip, tmpOkIPFileName)
+
+		if ip.Delay <= config.Delay {
+			gaipbuf.WriteString(ip.Address)
 			gaipbuf.WriteString("|")
 			gpipbuf.WriteString("\"")
-			gpipbuf.WriteString(uniqueIP.address)
+			gpipbuf.WriteString(ip.Address)
 			gpipbuf.WriteString("\",")
 		}
 	}
@@ -413,13 +270,8 @@ func writeOkIP() (total, gws, gvs int) {
 	if len(gpip) > 0 {
 		gpip = gpip[:len(gpip)-1]
 	}
-	err = ioutil.WriteFile(filepath.Join(curDir, okIPFileName),
-		[]byte(gaip+"\n"+gpip), 0755)
-	utils.CheckErr(err)
+	err = ioutil.WriteFile(jsonIPFileName, []byte(gaip+"\n"+gpip), 0755)
+	checkErr(fmt.Sprintf("write ip to file %s error: ", jsonIPFileName), err, Error)
 
 	return total, gws, gvs
 }
-
-func (ips IPs) Len() int           { return len(ips) }
-func (ips IPs) Swap(i, j int)      { ips[i], ips[j] = ips[j], ips[i] }
-func (ips IPs) Less(i, j int) bool { return ips[i].timeDelay < ips[j].timeDelay }
