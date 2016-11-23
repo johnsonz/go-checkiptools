@@ -98,7 +98,7 @@ func getGoogleIPRange() []string {
 	bytes, err := ioutil.ReadFile(googleIPFileName)
 	checkErr(fmt.Sprintf("read file %s error: ", googleIPFileName), err, Error)
 
-	lines := strings.Split(string(bytes), "\n")
+	lines := strings.Split(string(bytes), "\r\n")
 	for _, line := range lines {
 		if len(line) > 7 {
 			m[line] = line
