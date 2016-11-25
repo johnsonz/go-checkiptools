@@ -74,12 +74,15 @@ func getLastOkIP() []IP {
 			if len(ipInfo) == 6 {
 				delay, err := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
 				checkErr("delay conversion failed: ", err, Warning)
+				bandwidth, err := strconv.Atoi(ipInfo[5][:len(ipInfo[5])-4])
+				checkErr("bandwidth conversion failed: ", err, Warning)
 				checkedip = IP{
 					Address:     ipInfo[0],
 					Delay:       delay,
 					CommonName:  ipInfo[2],
 					ServerName:  ipInfo[3],
 					CountryName: ipInfo[4],
+					Bandwidth:   bandwidth,
 				}
 				m[ipInfo[0]] = checkedip
 			}
