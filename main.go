@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -44,7 +45,6 @@ const (
 var config Config
 var curDir string
 var separator string
-var err error
 var certPool *x509.CertPool
 var tlsConfig *tls.Config
 var dialer net.Dialer
@@ -52,7 +52,7 @@ var dialer net.Dialer
 func init() {
 	parseConfig()
 	loadCertPem()
-
+	createFile()
 	tlsConfig = &tls.Config{
 		RootCAs:            certPool,
 		InsecureSkipVerify: true,
@@ -75,10 +75,11 @@ func main() {
 	ips := append(lastOkIPs, getGoogleIP()...)
 
 	fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
-	time.Sleep(80 * 1000)
+	time.Sleep(10 * 1000)
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
+
 	//check all goole ip begin
 	t0 := time.Now()
 	go func() {
@@ -94,14 +95,39 @@ func main() {
 	for i := 0; i < cap(done); i++ {
 		done <- true
 	}
-
-	total, gws, gvs := writeJSONIP2File()
-	t1 := time.Now()
-	delay := int(t1.Sub(t0).Seconds())
-	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", delay, total, gws, gvs)
 	//check all goole ip end
 
-	fmt.Println("press 'Enter' to continue...")
+	if config.CheckBandwidth {
+
+		jobs := make(chan IP, config.BandwidthConcurrency)
+		done := make(chan bool, config.BandwidthConcurrency)
+
+		ips := getLastOkIP()
+		_, err := os.Create(tmpOkIPFileName)
+		checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
+		// t2 := time.Now()
+		go func() {
+			for _, ip := range ips {
+				jobs <- ip
+			}
+			close(jobs)
+		}()
+		for ip := range jobs {
+			done <- true
+			go checkBandwidth(ip, done)
+		}
+		for i := 0; i < cap(done); i++ {
+			done <- true
+		}
+		// t3 := time.Now()
+		// cost := int(t3.Sub(t2).Seconds())
+	}
+	total, gws, gvs := writeJSONIP2File()
+	t1 := time.Now()
+	cost := int(t1.Sub(t0).Seconds())
+	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", cost, total, gws, gvs)
+
+	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
 }
 
@@ -130,7 +156,7 @@ func checkIP(ip string, done chan bool) {
 	var checkedip IP
 	checkedip.Address = ip
 	checkedip.Bandwidth = -1
-
+	checkedip.CountryName = "-"
 	dialer = net.Dialer{
 		Timeout:   time.Millisecond * time.Duration(config.Timeout),
 		KeepAlive: 0,
@@ -148,6 +174,7 @@ func checkIP(ip string, done chan bool) {
 	t0 := time.Now()
 	tlsClient := tls.Client(conn, tlsConfig)
 	err = tlsClient.Handshake()
+
 	if err != nil {
 		checkErr(fmt.Sprintf("%s handshake error: ", ip), err, Debug)
 		appendIP2File(checkedip, tmpErrIPFileName)
@@ -171,7 +198,6 @@ func checkIP(ip string, done chan bool) {
 		checkedip.OrgName = orgNames[0]
 	}
 	countryNames := peerCertSubject.Country
-	checkedip.CountryName = "-"
 	if len(countryNames) > 0 {
 		checkedip.CountryName = countryNames[0]
 	}
@@ -221,14 +247,18 @@ func appendIP2File(checkedip IP, filename string) {
 
 //Create files if they donnot exist, or truncate them.
 func createFile() {
-	_, err := os.Create(tmpOkIPFileName)
-	checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
-
-	_, err = os.Create(tmpNoIPFileName)
-	checkErr(fmt.Sprintf("create file %s error: ", tmpNoIPFileName), err, Error)
-
-	_, err = os.Create(tmpErrIPFileName)
-	checkErr(fmt.Sprintf("create file %s error: ", tmpErrIPFileName), err, Error)
+	if !isFileExist(tmpOkIPFileName) {
+		_, err := os.Create(tmpOkIPFileName)
+		checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
+	}
+	if !isFileExist(tmpNoIPFileName) {
+		_, err := os.Create(tmpNoIPFileName)
+		checkErr(fmt.Sprintf("create file %s error: ", tmpNoIPFileName), err, Error)
+	}
+	if !isFileExist(tmpErrIPFileName) {
+		_, err := os.Create(tmpErrIPFileName)
+		checkErr(fmt.Sprintf("create file %s error: ", tmpErrIPFileName), err, Error)
+	}
 }
 
 /**
@@ -274,4 +304,51 @@ func writeJSONIP2File() (total, gws, gvs int) {
 	checkErr(fmt.Sprintf("write ip to file %s error: ", jsonIPFileName), err, Error)
 
 	return total, gws, gvs
+}
+
+func checkBandwidth(ip IP, done chan bool) {
+	defer func() {
+		<-done
+	}()
+	ip.Bandwidth = -1
+	if ip.ServerName == "gvs" {
+		appendIP2File(ip, tmpOkIPFileName)
+		checkErr(fmt.Sprintf("%s %s %s NaN", ip.Address, ip.CommonName, ip.ServerName), errors.New("gvs skipped"), Info)
+		return
+	}
+	conn, err := dialer.Dial("tcp", net.JoinHostPort(ip.Address, "443"))
+	if err != nil {
+		appendIP2File(ip, tmpOkIPFileName)
+		checkErr(fmt.Sprintf("%s dial error: ", ip.Address), err, Info)
+		return
+	}
+	defer conn.Close()
+
+	tlsClient := tls.Client(conn, tlsConfig)
+	_, err = tlsClient.Write([]byte("GET /storage/v1/b/google-code-archive/o/v2%2Fcode.google.com%2Fgogo-tester%2Fwiki%2F1m.wiki?alt=media HTTP/1.1\r\nHost: www.googleapis.com\r\nConnection: close\r\n\r\n"))
+	if err != nil {
+		appendIP2File(ip, tmpOkIPFileName)
+		checkErr(fmt.Sprintf("%s tls write data error: ", ip.Address), err, Info)
+		return
+	}
+	defer tlsClient.Close()
+
+	buf := make([]byte, 0, 4096)
+	tmp := make([]byte, 1024)
+	t0 := time.Now()
+	for {
+		n, err := tlsClient.Read(tmp)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("read error:", err)
+			}
+			break
+		}
+		buf = append(buf, tmp[:n]...)
+	}
+	t1 := time.Now()
+
+	ip.Bandwidth = int(float64(len(buf)) / 1024 / t1.Sub(t0).Seconds())
+	appendIP2File(ip, tmpOkIPFileName)
+	checkErr(fmt.Sprintf("%s %s %s %dKB/s", ip.Address, ip.CommonName, ip.ServerName, ip.Bandwidth), errors.New(""), Info)
 }
