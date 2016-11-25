@@ -20,6 +20,7 @@ import (
 type Config struct {
 	Concurrency          int      `json:"concurrency"`
 	Timeout              int      `json:"timeout"`
+	HandshakeTimeout     int      `json:"handshake_timeout"`
 	Delay                int      `json:"delay"`
 	OrgNames             []string `json:"organization"`
 	GwsDomains           []string `json:"gws"`
@@ -173,6 +174,7 @@ func checkIP(ip string, done chan bool) {
 
 	t0 := time.Now()
 	tlsClient := tls.Client(conn, tlsConfig)
+	tlsClient.SetDeadline(time.Now().Add(time.Millisecond * time.Duration(config.HandshakeTimeout)))
 	err = tlsClient.Handshake()
 
 	if err != nil {

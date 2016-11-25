@@ -1,6 +1,7 @@
 {
     "concurrency":1000,
     "timeout":5000,
+    "handshake_timeout":5000,
     "delay":1200,
     "organization":[
         "Google Inc"
