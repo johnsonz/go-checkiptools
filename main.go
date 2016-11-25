@@ -327,6 +327,7 @@ func checkBandwidth(ip IP, done chan bool) {
 	defer conn.Close()
 
 	tlsClient := tls.Client(conn, tlsConfig)
+	tlsClient.SetDeadline(time.Now().Add(time.Minute * 5))
 	_, err = tlsClient.Write([]byte("GET /storage/v1/b/google-code-archive/o/v2%2Fcode.google.com%2Fgogo-tester%2Fwiki%2F1m.wiki?alt=media HTTP/1.1\r\nHost: www.googleapis.com\r\nConnection: close\r\n\r\n"))
 	if err != nil {
 		appendIP2File(ip, tmpOkIPFileName)
