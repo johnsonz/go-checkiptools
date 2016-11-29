@@ -43,7 +43,6 @@ func tips() {
 		goagent2goproxy()
 	default:
 		tips()
-
 	}
 }
 func convertIP2JSON() {
@@ -52,6 +51,7 @@ func convertIP2JSON() {
 	var delay int
 	var err error
 	isAll := true
+	isGWS := false
 	if len(input) > 0 {
 		delay, err = strconv.Atoi(input)
 		if err != nil {
@@ -61,7 +61,12 @@ func convertIP2JSON() {
 		}
 		isAll = false
 	}
-	gws, gvs := writeJSONIP2File(delay, isAll)
+	fmt.Print("\n是否只提取gws的IP，是请输入y，否请直接按回车键：")
+	isgws := getInputFromCommand()
+	if isgws == "y" || isgws == "Y" {
+		isGWS = true
+	}
+	gws, gvs := writeJSONIP2File(delay, isGWS, isAll)
 	fmt.Printf("\ndelay: %dms, ip count: %d(gws: %d, gvs: %d)\n", delay, gws+gvs, gws, gvs)
 
 	fmt.Println("\npress Enter to continue...")
@@ -129,7 +134,7 @@ func getLastOkIP() []IP {
 writeJSONIP2File: sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
-func writeJSONIP2File(delay int, isAll bool) (gws, gvs int) {
+func writeJSONIP2File(delay int, isGWS, isAll bool) (gws, gvs int) {
 	okIPs := getLastOkIP()
 	_, err := os.Create(jsonIPFileName)
 	if err != nil {
@@ -137,21 +142,29 @@ func writeJSONIP2File(delay int, isAll bool) (gws, gvs int) {
 	}
 	var gaipbuf, gpipbuf bytes.Buffer
 	for _, ip := range okIPs {
-
-		if isAll {
+		if isGWS {
 			if ip.ServerName == "gws" {
-				gws++
+				if isAll {
+
+					gws++
+					gaipbuf.WriteString(ip.Address)
+					gaipbuf.WriteString("|")
+					gpipbuf.WriteString("\"")
+					gpipbuf.WriteString(ip.Address)
+					gpipbuf.WriteString("\",")
+				} else {
+					if ip.Delay <= delay {
+						gws++
+						gaipbuf.WriteString(ip.Address)
+						gaipbuf.WriteString("|")
+						gpipbuf.WriteString("\"")
+						gpipbuf.WriteString(ip.Address)
+						gpipbuf.WriteString("\",")
+					}
+				}
 			}
-			if ip.ServerName == "gvs" {
-				gvs++
-			}
-			gaipbuf.WriteString(ip.Address)
-			gaipbuf.WriteString("|")
-			gpipbuf.WriteString("\"")
-			gpipbuf.WriteString(ip.Address)
-			gpipbuf.WriteString("\",")
 		} else {
-			if ip.Delay <= delay {
+			if isAll {
 				if ip.ServerName == "gws" {
 					gws++
 				}
@@ -163,9 +176,24 @@ func writeJSONIP2File(delay int, isAll bool) (gws, gvs int) {
 				gpipbuf.WriteString("\"")
 				gpipbuf.WriteString(ip.Address)
 				gpipbuf.WriteString("\",")
+			} else {
+				if ip.Delay <= delay {
+					if ip.ServerName == "gws" {
+						gws++
+					}
+					if ip.ServerName == "gvs" {
+						gvs++
+					}
+					gaipbuf.WriteString(ip.Address)
+					gaipbuf.WriteString("|")
+					gpipbuf.WriteString("\"")
+					gpipbuf.WriteString(ip.Address)
+					gpipbuf.WriteString("\",")
+				}
 			}
 		}
 	}
+
 	gaip := gaipbuf.String()
 	gpip := gpipbuf.String()
 
