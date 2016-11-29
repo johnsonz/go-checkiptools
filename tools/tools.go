@@ -15,6 +15,7 @@ type IP struct {
 	Address    string
 	ServerName string
 	Delay      int
+	Bandwidth  int
 }
 
 const (
@@ -46,14 +47,17 @@ func tips() {
 	}
 }
 func convertIP2JSON() {
-	fmt.Print("\n请输入最大延迟（以毫秒计算），否则提取所有IP：")
-	input := getInputFromCommand()
 	var delay int
+	var bandwidth int
 	var err error
 	isAll := true
+	isAllBandwidth := true
 	isGWS := false
-	if len(input) > 0 {
-		delay, err = strconv.Atoi(input)
+
+	fmt.Print("\n请输入最大延迟（以毫秒计算），否则提取所有IP：")
+	delaytmp := getInputFromCommand()
+	if len(delaytmp) > 0 {
+		delay, err = strconv.Atoi(delaytmp)
 		if err != nil {
 			fmt.Println("\n输入不正确，请重新输入。")
 			convertIP2JSON()
@@ -66,8 +70,19 @@ func convertIP2JSON() {
 	if isgws == "y" || isgws == "Y" {
 		isGWS = true
 	}
-	gws, gvs := writeJSONIP2File(delay, isGWS, isAll)
-	fmt.Printf("\ndelay: %dms, ip count: %d(gws: %d, gvs: %d)\n", delay, gws+gvs, gws, gvs)
+CheckBD:
+	fmt.Print("\n请输入最小带宽（以KB计算，仅针对gws IP）,否则提取所有带宽的IP：")
+	bandwidthtmp := getInputFromCommand()
+	if len(bandwidthtmp) > 0 {
+		bandwidth, err = strconv.Atoi(bandwidthtmp)
+		if err != nil {
+			fmt.Println("\n输入不正确，请重新输入。")
+			goto CheckBD
+		}
+		isAllBandwidth = false
+	}
+	gws, gvs := writeJSONIP2File(delay, bandwidth, isGWS, isAllBandwidth, isAll)
+	fmt.Printf("\ndelay: %dms, bandwidth: %d, ip count: %d(gws: %d, gvs: %d)\n", delay, bandwidth, gws+gvs, gws, gvs)
 
 	fmt.Println("\npress Enter to continue...")
 	fmt.Scanln()
@@ -115,10 +130,15 @@ func getLastOkIP() []IP {
 			ipInfo := strings.Split(line, " ")
 			if len(ipInfo) == 6 {
 				delay, _ := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
+				bandwidth, err := strconv.Atoi(ipInfo[5][:len(ipInfo[5])-4])
+				if err != nil {
+					fmt.Println("bandwidth conversion failed: ", err)
+				}
 				checkedip = IP{
 					Address:    ipInfo[0],
 					Delay:      delay,
 					ServerName: ipInfo[3],
+					Bandwidth:  bandwidth,
 				}
 				m[ipInfo[0]] = checkedip
 			}
@@ -134,7 +154,7 @@ func getLastOkIP() []IP {
 writeJSONIP2File: sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
-func writeJSONIP2File(delay int, isGWS, isAll bool) (gws, gvs int) {
+func writeJSONIP2File(delay int, bandwidth int, isGWS, isAllBandwidth, isAll bool) (gws, gvs int) {
 	okIPs := getLastOkIP()
 	_, err := os.Create(jsonIPFileName)
 	if err != nil {
@@ -142,42 +162,29 @@ func writeJSONIP2File(delay int, isGWS, isAll bool) (gws, gvs int) {
 	}
 	var gaipbuf, gpipbuf bytes.Buffer
 	for _, ip := range okIPs {
-		if isGWS {
-			if ip.ServerName == "gws" {
-				if isAll {
-
-					gws++
-					gaipbuf.WriteString(ip.Address)
-					gaipbuf.WriteString("|")
-					gpipbuf.WriteString("\"")
-					gpipbuf.WriteString(ip.Address)
-					gpipbuf.WriteString("\",")
-				} else {
-					if ip.Delay <= delay {
+		if isAllBandwidth {
+			if isGWS {
+				if ip.ServerName == "gws" {
+					if isAll {
 						gws++
 						gaipbuf.WriteString(ip.Address)
 						gaipbuf.WriteString("|")
 						gpipbuf.WriteString("\"")
 						gpipbuf.WriteString(ip.Address)
 						gpipbuf.WriteString("\",")
+					} else {
+						if ip.Delay <= delay {
+							gws++
+							gaipbuf.WriteString(ip.Address)
+							gaipbuf.WriteString("|")
+							gpipbuf.WriteString("\"")
+							gpipbuf.WriteString(ip.Address)
+							gpipbuf.WriteString("\",")
+						}
 					}
 				}
-			}
-		} else {
-			if isAll {
-				if ip.ServerName == "gws" {
-					gws++
-				}
-				if ip.ServerName == "gvs" {
-					gvs++
-				}
-				gaipbuf.WriteString(ip.Address)
-				gaipbuf.WriteString("|")
-				gpipbuf.WriteString("\"")
-				gpipbuf.WriteString(ip.Address)
-				gpipbuf.WriteString("\",")
 			} else {
-				if ip.Delay <= delay {
+				if isAll {
 					if ip.ServerName == "gws" {
 						gws++
 					}
@@ -189,11 +196,76 @@ func writeJSONIP2File(delay int, isGWS, isAll bool) (gws, gvs int) {
 					gpipbuf.WriteString("\"")
 					gpipbuf.WriteString(ip.Address)
 					gpipbuf.WriteString("\",")
+				} else {
+					if ip.Delay <= delay {
+						if ip.ServerName == "gws" {
+							gws++
+						}
+						if ip.ServerName == "gvs" {
+							gvs++
+						}
+						gaipbuf.WriteString(ip.Address)
+						gaipbuf.WriteString("|")
+						gpipbuf.WriteString("\"")
+						gpipbuf.WriteString(ip.Address)
+						gpipbuf.WriteString("\",")
+					}
+				}
+			}
+		} else {
+			if ip.Bandwidth >= bandwidth {
+				if isGWS {
+					if ip.ServerName == "gws" {
+						if isAll {
+							gws++
+							gaipbuf.WriteString(ip.Address)
+							gaipbuf.WriteString("|")
+							gpipbuf.WriteString("\"")
+							gpipbuf.WriteString(ip.Address)
+							gpipbuf.WriteString("\",")
+						} else {
+							if ip.Delay <= delay {
+								gws++
+								gaipbuf.WriteString(ip.Address)
+								gaipbuf.WriteString("|")
+								gpipbuf.WriteString("\"")
+								gpipbuf.WriteString(ip.Address)
+								gpipbuf.WriteString("\",")
+							}
+						}
+					}
+				} else {
+					if isAll {
+						if ip.ServerName == "gws" {
+							gws++
+						}
+						if ip.ServerName == "gvs" {
+							gvs++
+						}
+						gaipbuf.WriteString(ip.Address)
+						gaipbuf.WriteString("|")
+						gpipbuf.WriteString("\"")
+						gpipbuf.WriteString(ip.Address)
+						gpipbuf.WriteString("\",")
+					} else {
+						if ip.Delay <= delay {
+							if ip.ServerName == "gws" {
+								gws++
+							}
+							if ip.ServerName == "gvs" {
+								gvs++
+							}
+							gaipbuf.WriteString(ip.Address)
+							gaipbuf.WriteString("|")
+							gpipbuf.WriteString("\"")
+							gpipbuf.WriteString(ip.Address)
+							gpipbuf.WriteString("\",")
+						}
+					}
 				}
 			}
 		}
 	}
-
 	gaip := gaipbuf.String()
 	gpip := gpipbuf.String()
 
