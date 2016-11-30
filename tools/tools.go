@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -89,20 +90,47 @@ CheckBD:
 	tips()
 }
 func goagent2goproxy() {
-	fmt.Println("请输入需要转换的IP, 可使用右键->粘贴：")
+	fmt.Println("请输入需要转换的IP, 会自动去除重复IP，可使用右键->粘贴：")
+	fmt.Println()
 	rawips := getInputFromCommand()
 	rawips = strings.TrimSpace(rawips)
-	var ips string
+	var ipstr string
+	m := make(map[string]string)
 	if strings.Contains(rawips, "|") {
-		ips = strings.Trim(rawips, "|")
-		ips = strings.Replace(ips, "|", "\",\"", -1)
-		ips = "\"" + ips + "\""
+		ips := strings.Split(rawips, "|")
+		for _, ip := range ips {
+			tmpip := net.ParseIP(ip)
+			if tmpip != nil {
+				m[tmpip.String()] = tmpip.String()
+			}
+		}
+		var ipbuf bytes.Buffer
+		for k := range m {
+			ipbuf.WriteString("\"")
+			ipbuf.WriteString(k)
+			ipbuf.WriteString("\",")
+		}
+		ipstr = ipbuf.String()
+		ipstr = ipstr[:len(ipstr)-1]
 	} else {
-		ips = strings.Replace(rawips, "\",\"", "|", -1)
-		ips = rawips[1 : len(rawips)-1]
+		rawips = rawips[1 : len(rawips)-1]
+		ips := strings.Split(strings.TrimSpace(rawips), "\",\"")
+		for _, ip := range ips {
+			tmpip := net.ParseIP(ip)
+			if tmpip != nil {
+				m[tmpip.String()] = tmpip.String()
+			}
+		}
+		var ipbuf bytes.Buffer
+		for k := range m {
+			ipbuf.WriteString(k)
+			ipbuf.WriteString("|")
+		}
+		ipstr = ipbuf.String()
+		ipstr = ipstr[:len(ipstr)-1]
 	}
 	fmt.Println()
-	fmt.Println(ips)
+	fmt.Println(ipstr)
 	fmt.Println("\npress Enter to continue...")
 	fmt.Scanln()
 	tips()
