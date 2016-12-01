@@ -21,6 +21,5 @@
     "bandwidth_timeout":5000,
     "check_http2":false,
     "write_to_goproxy":false,
-    "goproxy_path":"",
-
+    "goproxy_path":""
 }

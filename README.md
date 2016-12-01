@@ -24,6 +24,6 @@ https://github.com/johnsonz/go-checkiptools/releases
 
 `"bandwidth_concurrency":10` 测试带宽的并发线程数，可根据自己的网络环境调整
 
-`"write_to_goproxy":false,` 扫描完成后是否将ip自动写入到gae.json或gae.user.json，默认为false，不写入
+`"write_to_goproxy":false` 扫描完成后是否将ip自动写入到gae.json或gae.user.json，默认为false，不写入
 
-`"goproxy_path":"",` goproxy目录，请注意目录分隔符，windows下需用`\`转义
+`"goproxy_path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
