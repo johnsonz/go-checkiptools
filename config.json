@@ -19,5 +19,8 @@
     "sort_bandwidth":true,
     "bandwidth_concurrency":10,
     "bandwidth_timeout":5000,
-    "check_http2":false
+    "check_http2":false,
+    "write_to_goproxy":false,
+    "goproxy_path":"",
+
 }

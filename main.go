@@ -12,7 +12,9 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -31,6 +33,8 @@ type Config struct {
 	SortBandwidth        bool     `json:"sort_bandwidth"`
 	BandwidthConcurrency int      `json:"bandwidth_concurrency"`
 	BandwidthTimeout     int      `json:"bandwidth_timeout"`
+	Write2Goproxy        bool     `json:"write_to_goproxy"`
+	GoproxyPath          string   `json:"goproxy_path"`
 }
 
 const (
@@ -123,11 +127,20 @@ func main() {
 		// t3 := time.Now()
 		// cost := int(t3.Sub(t2).Seconds())
 	}
-	total, gws, gvs := writeJSONIP2File()
+	gws, gvs, gpips := writeJSONIP2File()
 	t1 := time.Now()
 	cost := int(t1.Sub(t0).Seconds())
-	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", cost, total, gws, gvs)
-
+	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", cost, gws+gvs, gws, gvs)
+	if config.Write2Goproxy {
+		file := filepath.Join(config.GoproxyPath, "gae.user.json")
+		if isFileExist(file) {
+			writeIP2Goproxy(file, gpips)
+		} else if isFileExist(filepath.Join(config.GoproxyPath, "gae.user.json")) {
+			writeIP2Goproxy(file, gpips)
+		} else {
+			fmt.Println("directory: ", config.GoproxyPath, " not found.")
+		}
+	}
 	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
 }
@@ -267,9 +280,8 @@ func createFile() {
 writeJSONIP2File: sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
-func writeJSONIP2File() (total, gws, gvs int) {
+func writeJSONIP2File() (gws, gvs int, gpips string) {
 	okIPs := getLastOkIP()
-	total = len(getLastOkIP())
 	if config.SortOkIP {
 		sort.Sort(ByDelay{IPs(okIPs)})
 	}
@@ -293,21 +305,35 @@ func writeJSONIP2File() (total, gws, gvs int) {
 			gpipbuf.WriteString("\",")
 		}
 	}
-	gaip := gaipbuf.String()
-	gpip := gpipbuf.String()
+	gaips := gaipbuf.String()
+	gpips = gpipbuf.String()
 
-	if len(gaip) > 0 {
-		gaip = gaip[:len(gaip)-1]
+	if len(gaips) > 0 {
+		gaips = gaips[:len(gaips)-1]
 	}
-	if len(gpip) > 0 {
-		gpip = gpip[:len(gpip)-1]
+	if len(gpips) > 0 {
+		gpips = gpips[:len(gpips)-1]
 	}
-	err = ioutil.WriteFile(jsonIPFileName, []byte(gaip+"\n"+gpip), 0755)
+	err = ioutil.WriteFile(jsonIPFileName, []byte(gaips+"\n"+gpips), 0755)
 	checkErr(fmt.Sprintf("write ip to file %s error: ", jsonIPFileName), err, Error)
 
-	return total, gws, gvs
+	return gws, gvs, gpips
 }
 
+//writeIP2Goproxy: write json ip to gae.user.json or gae.json
+func writeIP2Goproxy(file, jsonips string) {
+	data, err := ioutil.ReadFile(file)
+	checkErr(fmt.Sprintf("read file %s error: ", file), err, Error)
+	content := string(data)
+	if n := strings.Index(content, "HostMap"); n > -1 {
+		tmp := content[n:]
+		tmp = tmp[strings.Index(tmp, "[")+1 : strings.Index(tmp, "]")]
+		content = strings.Replace(content, tmp, "\r\n\t\t\t"+jsonips+"\r\n\t\t\t", -1)
+		err := ioutil.WriteFile(file, []byte(content), 0777)
+		checkErr(fmt.Sprintf("write ip to file %s error: ", file), err, Error)
+		fmt.Println("write ip to .json file successfully.")
+	}
+}
 func checkBandwidth(ip IP, done chan bool) {
 	defer func() {
 		<-done
