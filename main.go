@@ -148,18 +148,18 @@ func main() {
 //Parse config file
 func parseConfig() {
 	conf, err := ioutil.ReadFile(configFileName)
-	checkErr("read config file error: ", err, Info)
+	checkErr("read config file error: ", err, Error)
 	err = json.Unmarshal(conf, &config)
-	checkErr("parse config file error: ", err, Info)
+	checkErr("parse config file error: ", err, Error)
 }
 
 //Load cacert.pem
 func loadCertPem() {
 	certpem, err := ioutil.ReadFile(certFileName)
-	checkErr(fmt.Sprintf("read pem file %s error: ", certFileName), err, Info)
+	checkErr(fmt.Sprintf("read pem file %s error: ", certFileName), err, Error)
 	certPool = x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(certpem) {
-		checkErr(fmt.Sprintf("load pem file %s error: ", certFileName), errors.New("load pem file error"), Info)
+		checkErr(fmt.Sprintf("load pem file %s error: ", certFileName), errors.New("load pem file error"), Error)
 	}
 }
 
