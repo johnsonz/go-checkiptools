@@ -55,6 +55,7 @@ var tlsConfig *tls.Config
 var dialer net.Dialer
 
 func init() {
+	fmt.Println("initial...")
 	parseConfig()
 	loadCertPem()
 	createFile()
@@ -80,7 +81,7 @@ func main() {
 	ips := append(lastOkIPs, getGoogleIP()...)
 
 	fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
-	time.Sleep(10 * 1000)
+	time.Sleep(5 * time.Second)
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
