@@ -10,6 +10,9 @@
 ## 下载地址
 https://github.com/johnsonz/go-checkiptools/releases
 
+## 编译
+gox https://github.com/mitchellh/gox
+
 ## 配置说明
 
 `"concurrency":10000` 并发线程数，可根据自己的硬件配置调整
