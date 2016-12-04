@@ -208,6 +208,7 @@ func checkIP(ip string, done chan bool) {
 	checkedip.Delay = int(t1.Sub(t0).Seconds() * 1000)
 
 	peerCertSubject := tlsClient.ConnectionState().PeerCertificates[0].Subject
+	DNSNames := tlsClient.ConnectionState().PeerCertificates[0].DNSNames
 	checkedip.CommonName = peerCertSubject.CommonName
 	orgNames := peerCertSubject.Organization
 	if len(peerCertSubject.Organization) > 0 {
@@ -220,32 +221,32 @@ func checkIP(ip string, done chan bool) {
 
 	for _, org := range config.OrgNames {
 		if org == checkedip.OrgName {
-			var flag0, flag1 bool
 			for _, gws := range config.GwsDomains {
-				if gws == checkedip.CommonName {
-					checkedip.ServerName = "gws"
-					appendIP2File(checkedip, tmpOkIPFileName)
-					flag0 = true
-					break
-				}
-			}
-			if !flag0 {
-				for _, gvs := range config.GvsDomains {
-					if gvs == checkedip.CommonName {
-						checkedip.ServerName = "gvs"
+				for _, DNSName := range DNSNames {
+					if strings.HasPrefix(DNSName, gws) {
+						checkedip.ServerName = "gws"
+						checkedip.CommonName = DNSName
 						appendIP2File(checkedip, tmpOkIPFileName)
-						flag1 = true
-						break
+						goto OK
 					}
 				}
 			}
-			if !flag0 && !flag1 {
-				appendIP2File(checkedip, tmpNoIPFileName)
+			for _, gvs := range config.GvsDomains {
+				for _, DNSName := range DNSNames {
+					if strings.HasPrefix(DNSName, gvs) {
+						checkedip.ServerName = "gvs"
+						checkedip.CommonName = DNSName
+						appendIP2File(checkedip, tmpOkIPFileName)
+						goto OK
+					}
+				}
 			}
+			appendIP2File(checkedip, tmpNoIPFileName)
 		} else {
 			appendIP2File(checkedip, tmpNoIPFileName)
 		}
 	}
+OK:
 	checkErr(fmt.Sprintf("%s: %s %s %s %dms", checkedip.Address, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName,
 		checkedip.Delay), errors.New(""), Info)
 }
