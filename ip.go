@@ -120,6 +120,8 @@ func getGoogleIPRange() []string {
   1. xxx.xxx.xxx.xxx
   2. xxx.xxx.xxx.xxx/xx
   3. xxx.xxx.xxx.xxx-xxx.xxx.xxx.xxx
+  4. xxx.xxx.xxx.xxx-xxx.
+  5. xxx.-xxx.
 */
 func parseGoogleIPRange(ipRange string) []string {
 	var ips []string
@@ -134,11 +136,34 @@ func parseGoogleIPRange(ipRange string) []string {
 		// remove network address and broadcast address
 		return ips[1 : len(ips)-1]
 	} else if strings.Contains(ipRange, "-") {
-		startIP := net.ParseIP(ipRange[:strings.Index(ipRange, "-")])
-		endIP := net.ParseIP(ipRange[strings.Index(ipRange, "-")+1:])
+		startIP := ipRange[:strings.Index(ipRange, "-")]
+		endIP := ipRange[strings.Index(ipRange, "-")+1:]
+		if strings.HasSuffix(startIP, ".") {
+			switch strings.Count(startIP, ".") {
+			case 1:
+				startIP += "0.0.0"
+			case 2:
+				startIP += "0.0"
+			case 3:
+				startIP += "0"
+			}
+		}
+		if strings.HasSuffix(endIP, ".") {
+			switch strings.Count(endIP, ".") {
+			case 1:
+				endIP += "255.255.255"
+			case 2:
+				endIP += "255.255"
+			case 3:
+				endIP += "255"
+			}
+		}
+		sIP := net.ParseIP(startIP)
+		eIP := net.ParseIP(endIP)
 
-		for ip := startIP; bytes.Compare(ip, endIP) <= 0; inc(ip) {
+		for ip := sIP; bytes.Compare(ip, eIP) <= 0; inc(ip) {
 			ips = append(ips, ip.String())
+
 		}
 	} else {
 		ips = append(ips, ipRange)
