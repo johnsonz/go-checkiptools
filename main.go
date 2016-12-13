@@ -134,13 +134,10 @@ func main() {
 	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", cost, gws+gvs, gws, gvs)
 	if config.Write2Goproxy {
 		file := filepath.Join(config.GoproxyPath, "gae.user.json")
-		if isFileExist(file) {
-			writeIP2Goproxy(file, gpips)
-		} else if isFileExist(filepath.Join(config.GoproxyPath, "gae.user.json")) {
-			writeIP2Goproxy(file, gpips)
-		} else {
-			fmt.Println("directory: ", config.GoproxyPath, " not found.")
+		if !isFileExist(file) {
+			file = filepath.Join(config.GoproxyPath, "gae.json")
 		}
+		writeIP2Goproxy(file, gpips)
 	}
 	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
