@@ -140,6 +140,13 @@ func main() {
 		writeIP2Goproxy(file, gpips)
 	}
 	fmt.Println("\npress 'Enter' to continue...")
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			fmt.Printf("%c", '\007')
+			time.Sleep(time.Second)
+		}
+		time.Sleep(time.Second * 3)
+	}
 	fmt.Scanln()
 }
 
