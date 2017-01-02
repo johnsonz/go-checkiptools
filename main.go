@@ -38,7 +38,7 @@ type Config struct {
 }
 
 const (
-	configFileName   string = "config.json"
+	configFileName   string = "main.json"
 	certFileName     string = "cacert.pem"
 	googleIPFileName string = "googleip.txt"
 	tmpOkIPFileName  string = "ip_tmpok.txt"
