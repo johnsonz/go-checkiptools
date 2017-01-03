@@ -30,3 +30,7 @@ gox https://github.com/mitchellh/gox
 `"write_to_goproxy":false` 扫描完成后是否将ip自动写入到gae.json或gae.user.json，默认为false，不写入
 
 `"goproxy_path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
+
+## 其它工具
+
+检测SNI服务器工具：[go-checksni](https://github.com/johnsonz/go-checksni)
