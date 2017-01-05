@@ -20,9 +20,9 @@ import (
 
 //Config Get config info from extra config.json file.
 type Config struct {
-	Concurrency          int      `json:"concurrency"`
-	Timeout              int      `json:"timeout"`
-	HandshakeTimeout     int      `json:"handshake_timeout"`
+	Concurrency          int `json:"concurrency"`
+	Timeout              int `json:"timeout"`
+	HandshakeTimeout     int
 	Delay                int      `json:"delay"`
 	OrgNames             []string `json:"organization"`
 	GwsDomains           []string `json:"gws"`
@@ -57,6 +57,7 @@ var dialer net.Dialer
 func init() {
 	fmt.Println("initial...")
 	parseConfig()
+	config.HandshakeTimeout = config.Timeout
 	loadCertPem()
 	createFile()
 	tlsConfig = &tls.Config{

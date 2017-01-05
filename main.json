@@ -1,7 +1,6 @@
 {
-    "concurrency":10000,
+    "concurrency":5000,
     "timeout":5000,
-    "handshake_timeout":5000,
     "delay":1200,
     "organization":[
         "Google Inc"
@@ -18,7 +17,7 @@
     "check_bandwidth":true,
     "sort_bandwidth":true,
     "bandwidth_concurrency":10,
-    "bandwidth_timeout":5000,
+    "bandwidth_timeout":8000,
     "check_http2":false,
     "write_to_goproxy":false,
     "goproxy_path":""

@@ -15,7 +15,7 @@ gox https://github.com/mitchellh/gox
 
 ## 配置说明
 
-`"concurrency":10000` 并发线程数，可根据自己的硬件配置调整
+`"concurrency":5000` 并发线程数，可根据自己的硬件配置调整
 
 `"delay":1200` 扫描完成后，提取所有小于等于该延迟的ip
 
