@@ -175,7 +175,7 @@ func checkIP(ip string, done chan bool) {
 	}()
 	var checkedip IP
 	checkedip.Address = ip
-	checkedip.Bandwidth = -1
+	checkedip.Bandwidth = 0
 	checkedip.CountryName = "-"
 	dialer = net.Dialer{
 		Timeout:   time.Millisecond * time.Duration(config.Timeout),
@@ -262,7 +262,11 @@ func appendIP2File(checkedip IP, filename string) {
 	checkErr(fmt.Sprintf("open file %s error: ", filename), err, Error)
 	defer f.Close()
 
-	_, err = f.WriteString(fmt.Sprintf("%s %dms %s %s %s %dKB/s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName, checkedip.Bandwidth))
+	ipInfo := fmt.Sprintf("%s %dms %s %s %s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName)
+	if config.CheckBandwidth {
+		ipInfo = fmt.Sprintf("%s %dms %s %s %s %dKB/s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName, checkedip.Bandwidth)
+	}
+	_, err = f.WriteString(ipInfo)
 	checkErr(fmt.Sprintf("append ip to file %s error: ", filename), err, Error)
 	f.Close()
 }
@@ -345,7 +349,7 @@ func checkBandwidth(ip IP, done chan bool) {
 	defer func() {
 		<-done
 	}()
-	ip.Bandwidth = -1
+	ip.Bandwidth = 0
 	if ip.ServerName == "gvs" {
 		appendIP2File(ip, tmpOkIPFileName)
 		checkErr(fmt.Sprintf("%s %s %s NaN", ip.Address, ip.CommonName, ip.ServerName), errors.New("gvs skipped"), Info)
