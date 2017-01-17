@@ -14,7 +14,7 @@
     ],
     "sort_tmpokfile":true,
     "check_last_okip":true,
-    "check_bandwidth":true,
+    "check_bandwidth":false,
     "sort_bandwidth":true,
     "bandwidth_concurrency":10,
     "bandwidth_timeout":8000,
