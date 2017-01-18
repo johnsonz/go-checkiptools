@@ -12,6 +12,12 @@
         "*.c.docs.google.com",
         "*.googlevideo.com"
     ],
+    "IPPool":{
+        "enabled":true,
+        "max_ip_number":1000,
+        "check_ip_all":false,
+        "delay":1200
+    },
     "sort_tmpokfile":true,
     "check_last_okip":true,
     "check_bandwidth":false,

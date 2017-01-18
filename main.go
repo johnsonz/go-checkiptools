@@ -35,6 +35,15 @@ type Config struct {
 	BandwidthTimeout     int      `json:"bandwidth_timeout"`
 	Write2Goproxy        bool     `json:"write_to_goproxy"`
 	GoproxyPath          string   `json:"goproxy_path"`
+	IPPool               `json:"IPPool"`
+}
+
+//IPPool maintance a ip pool
+type IPPool struct {
+	Enabled      bool `json:"enabled"`
+	MaxIPNnumber int  `json:"max_ip_number"`
+	CheckIPAll   bool `json:"check_ip_all"`
+	Delay        int  `json:"delay"`
 }
 
 const (
@@ -58,6 +67,10 @@ func init() {
 	fmt.Println("initial...")
 	parseConfig()
 	config.HandshakeTimeout = config.Timeout
+	if config.IPPool.Enabled {
+		config.Timeout = config.IPPool.Delay
+		config.HandshakeTimeout = config.IPPool.Delay
+	}
 	loadCertPem()
 	createFile()
 	tlsConfig = &tls.Config{
@@ -86,6 +99,7 @@ func main() {
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
+	maxNum := make(chan<- bool, config.IPPool.MaxIPNnumber)
 
 	//check all goole ip begin
 	t0 := time.Now()
@@ -97,10 +111,15 @@ func main() {
 	}()
 	for ip := range jobs {
 		done <- true
-		go checkIP(ip, done)
+		go checkIP(ip, done, maxNum)
+		if config.IPPool.Enabled && len(maxNum) == config.IPPool.MaxIPNnumber {
+			break
+		}
 	}
-	for i := 0; i < cap(done); i++ {
-		done <- true
+	if !config.IPPool.Enabled {
+		for i := 0; i < cap(done); i++ {
+			done <- true
+		}
 	}
 	//check all goole ip end
 
@@ -169,7 +188,7 @@ func loadCertPem() {
 	}
 }
 
-func checkIP(ip string, done chan bool) {
+func checkIP(ip string, done chan bool, maxNum chan<- bool) {
 	defer func() {
 		<-done
 	}()
@@ -185,6 +204,9 @@ func checkIP(ip string, done chan bool) {
 
 	conn, err := dialer.Dial("tcp", net.JoinHostPort(ip, "443"))
 	if err != nil {
+		if config.IPPool.Enabled && config.IPPool.MaxIPNnumber == len(maxNum) {
+			return
+		}
 		checkErr(fmt.Sprintf("%s dial error: ", ip), err, Debug)
 		appendIP2File(checkedip, tmpErrIPFileName)
 		return
@@ -197,6 +219,9 @@ func checkIP(ip string, done chan bool) {
 	err = tlsClient.Handshake()
 
 	if err != nil {
+		if config.IPPool.Enabled && config.IPPool.MaxIPNnumber == len(maxNum) {
+			return
+		}
 		checkErr(fmt.Sprintf("%s handshake error: ", ip), err, Debug)
 		appendIP2File(checkedip, tmpErrIPFileName)
 		return
@@ -205,6 +230,9 @@ func checkIP(ip string, done chan bool) {
 	t1 := time.Now()
 
 	if tlsClient.ConnectionState().PeerCertificates == nil {
+		if config.IPPool.Enabled && config.IPPool.MaxIPNnumber == len(maxNum) {
+			return
+		}
 		checkErr(fmt.Sprintf("%s peer certificates error: ", ip), errors.New("peer certificates is nil"), Debug)
 		appendIP2File(checkedip, tmpNoIPFileName)
 		return
@@ -231,6 +259,14 @@ func checkIP(ip string, done chan bool) {
 					if strings.HasPrefix(DNSName, gws) {
 						checkedip.ServerName = "gws"
 						checkedip.CommonName = DNSName
+
+						if config.IPPool.Enabled {
+							select {
+							case maxNum <- true:
+							default:
+								return
+							}
+						}
 						appendIP2File(checkedip, tmpOkIPFileName)
 						goto OK
 					}
@@ -241,6 +277,13 @@ func checkIP(ip string, done chan bool) {
 					if strings.HasPrefix(DNSName, gvs) {
 						checkedip.ServerName = "gvs"
 						checkedip.CommonName = DNSName
+						if config.IPPool.Enabled {
+							select {
+							case maxNum <- true:
+							default:
+								return
+							}
+						}
 						appendIP2File(checkedip, tmpOkIPFileName)
 						goto OK
 					}
@@ -307,13 +350,20 @@ func writeJSONIP2File() (gws, gvs int, gpips string) {
 			gvs++
 		}
 		appendIP2File(ip, tmpOkIPFileName)
-
-		if ip.Delay <= config.Delay {
+		if config.IPPool.Enabled {
 			gaipbuf.WriteString(ip.Address)
 			gaipbuf.WriteString("|")
 			gpipbuf.WriteString("\"")
 			gpipbuf.WriteString(ip.Address)
 			gpipbuf.WriteString("\",")
+		} else {
+			if ip.Delay <= config.Delay {
+				gaipbuf.WriteString(ip.Address)
+				gaipbuf.WriteString("|")
+				gpipbuf.WriteString("\"")
+				gpipbuf.WriteString(ip.Address)
+				gpipbuf.WriteString("\",")
+			}
 		}
 	}
 	gaips := gaipbuf.String()
