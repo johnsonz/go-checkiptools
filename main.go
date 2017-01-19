@@ -20,22 +20,18 @@ import (
 
 //Config Get config info from extra config.json file.
 type Config struct {
-	Concurrency          int `json:"concurrency"`
-	Timeout              int `json:"timeout"`
-	HandshakeTimeout     int
-	Delay                int      `json:"delay"`
-	OrgNames             []string `json:"organization"`
-	GwsDomains           []string `json:"gws"`
-	GvsDomains           []string `json:"gvs"`
-	SortOkIP             bool     `json:"sort_tmpokfile"`
-	CheckLastOkIP        bool     `json:"check_last_okip"`
-	CheckBandwidth       bool     `json:"check_bandwidth"`
-	SortBandwidth        bool     `json:"sort_bandwidth"`
-	BandwidthConcurrency int      `json:"bandwidth_concurrency"`
-	BandwidthTimeout     int      `json:"bandwidth_timeout"`
-	Write2Goproxy        bool     `json:"write_to_goproxy"`
-	GoproxyPath          string   `json:"goproxy_path"`
-	IPPool               `json:"IPPool"`
+	Concurrency      int `json:"concurrency"`
+	Timeout          int `json:"timeout"`
+	HandshakeTimeout int
+	Delay            int      `json:"delay"`
+	OrgNames         []string `json:"organization"`
+	GwsDomains       []string `json:"gws"`
+	GvsDomains       []string `json:"gvs"`
+	SortOkIP         bool     `json:"sort_tmpokfile"`
+	CheckLastOkIP    bool     `json:"check_last_okip"`
+	IPPool           `json:"IPPool"`
+	Bandwidth        `json:"check_bandwidth"`
+	GoProxy          `json:"write_to_goproxy"`
 }
 
 //IPPool maintance a ip pool
@@ -44,6 +40,20 @@ type IPPool struct {
 	MaxIPNnumber int  `json:"max_ip_number"`
 	CheckIPAll   bool `json:"check_ip_all"`
 	Delay        int  `json:"delay"`
+}
+
+//Bandwidth check bandwidth
+type Bandwidth struct {
+	Enabled     bool `json:"enabled"`
+	Sort        bool `json:"sort"`
+	Concurrency int  `json:"concurrency"`
+	Timeout     int  `json:"timeout"`
+}
+
+//GoProxy write ip to goproxy config
+type GoProxy struct {
+	Enabled bool   `json:"enabled"`
+	Path    string `json:"path"`
 }
 
 const (
@@ -83,7 +93,6 @@ func main() {
 
 	flag.Set("logtostderr", "true")
 	flag.Parse()
-
 	var lastOkIPs []string
 	if config.CheckLastOkIP {
 		tmpLastOkIPs := getLastOkIP()
@@ -123,10 +132,10 @@ func main() {
 	}
 	//check all goole ip end
 
-	if config.CheckBandwidth {
+	if config.Bandwidth.Enabled {
 
-		jobs := make(chan IP, config.BandwidthConcurrency)
-		done := make(chan bool, config.BandwidthConcurrency)
+		jobs := make(chan IP, config.Bandwidth.Concurrency)
+		done := make(chan bool, config.Bandwidth.Concurrency)
 
 		ips := getLastOkIP()
 		_, err := os.Create(tmpOkIPFileName)
@@ -152,10 +161,10 @@ func main() {
 	t1 := time.Now()
 	cost := int(t1.Sub(t0).Seconds())
 	fmt.Printf("\ntime: %ds, ok ip count: %d(gws: %d, gvs: %d)\n\n", cost, gws+gvs, gws, gvs)
-	if config.Write2Goproxy {
-		file := filepath.Join(config.GoproxyPath, "gae.user.json")
+	if config.GoProxy.Enabled {
+		file := filepath.Join(config.GoProxy.Path, "gae.user.json")
 		if !isFileExist(file) {
-			file = filepath.Join(config.GoproxyPath, "gae.json")
+			file = filepath.Join(config.GoProxy.Path, "gae.json")
 		}
 		writeIP2Goproxy(file, gpips)
 	}
@@ -306,7 +315,7 @@ func appendIP2File(checkedip IP, filename string) {
 	defer f.Close()
 
 	ipInfo := fmt.Sprintf("%s %dms %s %s %s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName)
-	if config.CheckBandwidth {
+	if config.Bandwidth.Enabled {
 		ipInfo = fmt.Sprintf("%s %dms %s %s %s %dKB/s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName, checkedip.Bandwidth)
 	}
 	_, err = f.WriteString(ipInfo)

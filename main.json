@@ -12,19 +12,23 @@
         "*.c.docs.google.com",
         "*.googlevideo.com"
     ],
+    "sort_tmpokfile":true,
+    "check_last_okip":true,
     "IPPool":{
         "enabled":false,
         "max_ip_number":1000,
         "check_ip_all":false,
         "delay":1200
     },
-    "sort_tmpokfile":true,
-    "check_last_okip":true,
-    "check_bandwidth":false,
-    "sort_bandwidth":true,
-    "bandwidth_concurrency":10,
-    "bandwidth_timeout":8000,
+    "check_bandwidth":{
+        "enabled":false,
+        "sort":true,
+        "concurrency":10,
+        "timeout":8000
+    },
     "check_http2":false,
-    "write_to_goproxy":false,
-    "goproxy_path":""
+    "write_to_goproxy":{
+        "enabled":false,
+        "path":""
+    }
 }
