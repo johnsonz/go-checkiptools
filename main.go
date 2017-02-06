@@ -99,6 +99,8 @@ func main() {
 		for _, ip := range tmpLastOkIPs {
 			lastOkIPs = append(lastOkIPs, ip.Address)
 		}
+		err := os.Truncate(tmpOkIPFileName, 0)
+		checkErr(fmt.Sprintf("truncate file %s error: ", tmpOkIPFileName), err, Error)
 	}
 
 	ips := append(lastOkIPs, getGoogleIP()...)
@@ -138,8 +140,8 @@ func main() {
 		done := make(chan bool, config.Bandwidth.Concurrency)
 
 		ips := getLastOkIP()
-		_, err := os.Create(tmpOkIPFileName)
-		checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
+		err := os.Truncate(tmpOkIPFileName, 0)
+		checkErr(fmt.Sprintf("truncate file %s error: ", tmpOkIPFileName), err, Error)
 		// t2 := time.Now()
 		go func() {
 			for _, ip := range ips {
@@ -329,14 +331,10 @@ func createFile() {
 		_, err := os.Create(tmpOkIPFileName)
 		checkErr(fmt.Sprintf("create file %s error: ", tmpOkIPFileName), err, Error)
 	}
-	if !isFileExist(tmpNoIPFileName) {
-		_, err := os.Create(tmpNoIPFileName)
-		checkErr(fmt.Sprintf("create file %s error: ", tmpNoIPFileName), err, Error)
-	}
-	if !isFileExist(tmpErrIPFileName) {
-		_, err := os.Create(tmpErrIPFileName)
-		checkErr(fmt.Sprintf("create file %s error: ", tmpErrIPFileName), err, Error)
-	}
+	_, err := os.Create(tmpNoIPFileName)
+	checkErr(fmt.Sprintf("create file %s error: ", tmpNoIPFileName), err, Error)
+	_, err = os.Create(tmpErrIPFileName)
+	checkErr(fmt.Sprintf("create file %s error: ", tmpErrIPFileName), err, Error)
 }
 
 /**
