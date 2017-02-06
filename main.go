@@ -29,7 +29,7 @@ type Config struct {
 	GvsDomains       []string `json:"gvs"`
 	SortOkIP         bool     `json:"sort_tmpokfile"`
 	CheckLastOkIP    bool     `json:"check_last_okip"`
-	IPPool           `json:"IPPool"`
+	IPPool           `json:"ippool"`
 	Bandwidth        `json:"check_bandwidth"`
 	GoProxy          `json:"write_to_goproxy"`
 }
