@@ -23,13 +23,25 @@ gox https://github.com/mitchellh/gox
 
 `"check_last_okip":true` 是否检查上一次的ok ip
 
-`"check_bandwidth":true` 扫描完成后，是否测试带宽（仅限gws的ip）
+`"ippool"` 是否维护一个最大IP数量
 
-`"bandwidth_concurrency":10` 测试带宽的并发线程数，可根据自己的网络环境调整
+>`"enabled":false` 默认为false，不启用
 
-`"write_to_goproxy":false` 扫描完成后是否将ip自动写入到gae.json或gae.user.json，默认为false，不写入
+>`"max_ip_number":1000` 最大IP数量，当扫描到的可用IP等于该值时停止扫描
 
-`"goproxy_path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
+>`"delay":1200` 延迟，会忽略上面的timeout和delay值
+
+`"check_bandwidth"` 测试带宽
+
+>`"enabled":false` 扫描完成后，是否测试带宽（仅限gws的ip），默认为false，不启用
+
+>`"concurrency":10`  测试带宽的并发线程数，可根据自己的网络环境调整
+
+`"write_to_goproxy"` 扫描完成后是否将ip自动写入到gae.json或gae.user.json
+
+>`"enabled":false` 默认为false，不写入
+
+>`"path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
 
 ## 其它工具
 
