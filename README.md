@@ -8,10 +8,10 @@
 自带实用小工具，扫描完成后会自动将ip写入到gae.json或gae.user.json，可以根据条件提取扫描出的ip，并可在goagent和goproxy ip格式之间相互转换。在扫描完成后会自动测试带宽（但仅限gws的ip）。
 
 ## 下载地址
-https://github.com/johnsonz/go-checkiptools/releases
+[Latest release](https://github.com/johnsonz/go-checkiptools/releases)
 
 ## 编译
-gox https://github.com/mitchellh/gox
+[gox](https://github.com/mitchellh/gox)
 
 ## 配置说明
 
