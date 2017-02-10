@@ -19,6 +19,8 @@
 
 `"delay":1200` 扫描完成后，提取所有小于等于该延迟的ip
 
+`"only_gws_ip":false` 扫描完成后，是否只提取gws ip，默认为false
+
 `"sort_tmpokfile":true` 扫描完成后，是否对ip_tmpok.txt中的ip根据延迟进行排序
 
 `"check_last_okip":true` 是否检查上一次的ok ip

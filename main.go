@@ -24,6 +24,7 @@ type Config struct {
 	Timeout          int `json:"timeout"`
 	HandshakeTimeout int
 	Delay            int      `json:"delay"`
+	OnlyGWSIP        bool     `json:"only_gws_ip"`
 	OrgNames         []string `json:"organization"`
 	GwsDomains       []string `json:"gws"`
 	GvsDomains       []string `json:"gvs"`
@@ -365,11 +366,22 @@ func writeJSONIP2File() (gws, gvs int, gpips string) {
 			gpipbuf.WriteString("\",")
 		} else {
 			if ip.Delay <= config.Delay {
-				gaipbuf.WriteString(ip.Address)
-				gaipbuf.WriteString("|")
-				gpipbuf.WriteString("\"")
-				gpipbuf.WriteString(ip.Address)
-				gpipbuf.WriteString("\",")
+				if config.OnlyGWSIP {
+					if ip.ServerName == "gws" {
+						gaipbuf.WriteString(ip.Address)
+						gaipbuf.WriteString("|")
+						gpipbuf.WriteString("\"")
+						gpipbuf.WriteString(ip.Address)
+						gpipbuf.WriteString("\",")
+					}
+				} else {
+					gaipbuf.WriteString(ip.Address)
+					gaipbuf.WriteString("|")
+					gpipbuf.WriteString("\"")
+					gpipbuf.WriteString(ip.Address)
+					gpipbuf.WriteString("\",")
+				}
+
 			}
 		}
 	}
