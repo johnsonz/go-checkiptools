@@ -47,4 +47,4 @@
 
 ## 其它工具
 
-检测SNI服务器工具：[go-checksni](https://github.com/johnsonz/go-checksni)
+检测SNI服务器工具：[go-sni-detector](https://github.com/johnsonz/go-sni-detector)
