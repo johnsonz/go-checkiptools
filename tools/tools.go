@@ -71,19 +71,19 @@ func convertIP2JSON() {
 	if isgws == "y" || isgws == "Y" {
 		isGWS = true
 	}
-CheckBD:
-	fmt.Print("\n请输入最小带宽（以KB计算，仅针对gws IP）,否则提取所有带宽的IP：")
-	bandwidthtmp := getInputFromCommand()
-	if len(bandwidthtmp) > 0 {
-		bandwidth, err = strconv.Atoi(bandwidthtmp)
-		if err != nil {
-			fmt.Println("\n输入不正确，请重新输入。")
-			goto CheckBD
-		}
-		isAllBandwidth = false
-	}
+	// CheckBD:
+	// 	fmt.Print("\n请输入最小带宽（以KB计算，仅针对gws IP）,否则提取所有带宽的IP：")
+	// 	bandwidthtmp := getInputFromCommand()
+	// 	if len(bandwidthtmp) > 0 {
+	// 		bandwidth, err = strconv.Atoi(bandwidthtmp)
+	// 		if err != nil {
+	// 			fmt.Println("\n输入不正确，请重新输入。")
+	// 			goto CheckBD
+	// 		}
+	// 		isAllBandwidth = false
+	// 	}
 	gws, gvs := writeJSONIP2File(delay, bandwidth, isGWS, isAllBandwidth, isAll)
-	fmt.Printf("\ndelay: %dms, bandwidth: %d, ip count: %d(gws: %d, gvs: %d)\n", delay, bandwidth, gws+gvs, gws, gvs)
+	fmt.Printf("\ndelay: %dms, ip count: %d(gws: %d, gvs: %d)\n", delay, gws+gvs, gws, gvs)
 
 	fmt.Println("\npress Enter to continue...")
 	fmt.Scanln()
@@ -156,17 +156,17 @@ func getLastOkIP() []IP {
 		lines := strings.Split(string(bytes), "\n")
 		for _, line := range lines {
 			ipInfo := strings.Split(line, " ")
-			if len(ipInfo) == 6 {
+			if len(ipInfo) == 6 || len(ipInfo) == 5 {
 				delay, _ := strconv.Atoi(ipInfo[1][:len(ipInfo[1])-2])
-				bandwidth, err := strconv.Atoi(ipInfo[5][:len(ipInfo[5])-4])
-				if err != nil {
-					fmt.Println("bandwidth conversion failed: ", err)
-				}
+				// bandwidth, err := strconv.Atoi(ipInfo[5][:len(ipInfo[5])-4])
+				// if err != nil {
+				// fmt.Println("bandwidth conversion failed: ", err)
+				// }
 				checkedip = IP{
 					Address:    ipInfo[0],
 					Delay:      delay,
 					ServerName: ipInfo[3],
-					Bandwidth:  bandwidth,
+					// Bandwidth:  bandwidth,
 				}
 				m[ipInfo[0]] = checkedip
 			}
