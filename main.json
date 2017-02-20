@@ -1,5 +1,5 @@
 {
-    "concurrency":5000,
+    "concurrency":200,
     "timeout":5000,
     "delay":1200,
     "only_gws_ip":false,
