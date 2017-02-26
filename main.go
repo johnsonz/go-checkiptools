@@ -313,7 +313,7 @@ OK:
 
 //append ip to related file
 func appendIP2File(checkedip IP, filename string) {
-	f, err := os.OpenFile(filename, os.O_APPEND, os.ModeAppend)
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	checkErr(fmt.Sprintf("open file %s error: ", filename), err, Error)
 	defer f.Close()
 
