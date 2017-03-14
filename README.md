@@ -10,7 +10,7 @@
 ## 下载地址
 [Latest release](https://github.com/johnsonz/go-checkiptools/releases)
 
-## 编译
+## 交叉编译
 [gox](https://github.com/mitchellh/gox)
 
 ## 配置说明
