@@ -23,6 +23,8 @@
 
 `"sort_tmpokfile":true` 扫描完成后，是否对ip_tmpok.txt中的ip根据延迟进行排序
 
+`"match_ip_by_dnsname":false` 使用DNSNames而不是CommonName进行ip匹配
+
 `"check_last_okip":true` 是否检查上一次的ok ip
 
 `"ippool"` 是否维护一个最大IP数量
@@ -44,6 +46,9 @@
 >`"enabled":false` 默认为false，不写入
 
 >`"path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
+
+## Wiki
+[Wiki](https://plumwine.me/go-checkiptools-usage-wiki/)
 
 ## 其它工具
 
