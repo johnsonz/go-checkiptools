@@ -28,6 +28,7 @@ type Config struct {
 	OrgNames         []string `json:"organization"`
 	GwsDomains       []string `json:"gws"`
 	GvsDomains       []string `json:"gvs"`
+	MatchByDNSName   bool     `json:"match_ip_by_dnsname"`
 	SortOkIP         bool     `json:"sort_tmpokfile"`
 	CheckLastOkIP    bool     `json:"check_last_okip"`
 	IPPool           `json:"ippool"`
@@ -267,11 +268,26 @@ func checkIP(ip string, done chan bool, maxNum chan<- bool) {
 	for _, org := range config.OrgNames {
 		if org == checkedip.OrgName {
 			for _, gws := range config.GwsDomains {
-				for _, DNSName := range DNSNames {
-					if strings.HasPrefix(DNSName, gws) {
-						checkedip.ServerName = "gws"
-						checkedip.CommonName = DNSName
+				if config.MatchByDNSName {
+					for _, DNSName := range DNSNames {
+						if strings.HasPrefix(DNSName, gws) {
+							checkedip.ServerName = "gws"
+							checkedip.CommonName = DNSName
 
+							if config.IPPool.Enabled {
+								select {
+								case maxNum <- true:
+								default:
+									return
+								}
+							}
+							appendIP2File(checkedip, tmpOkIPFileName)
+							goto OK
+						}
+					}
+				} else {
+					if checkedip.CommonName == gws {
+						checkedip.ServerName = "gws"
 						if config.IPPool.Enabled {
 							select {
 							case maxNum <- true:
@@ -285,10 +301,25 @@ func checkIP(ip string, done chan bool, maxNum chan<- bool) {
 				}
 			}
 			for _, gvs := range config.GvsDomains {
-				for _, DNSName := range DNSNames {
-					if strings.HasPrefix(DNSName, gvs) {
+				if config.MatchByDNSName {
+					for _, DNSName := range DNSNames {
+						if strings.HasPrefix(DNSName, gvs) {
+							checkedip.ServerName = "gvs"
+							checkedip.CommonName = DNSName
+							if config.IPPool.Enabled {
+								select {
+								case maxNum <- true:
+								default:
+									return
+								}
+							}
+							appendIP2File(checkedip, tmpOkIPFileName)
+							goto OK
+						}
+					}
+				} else {
+					if checkedip.CommonName == gvs {
 						checkedip.ServerName = "gvs"
-						checkedip.CommonName = DNSName
 						if config.IPPool.Enabled {
 							select {
 							case maxNum <- true:

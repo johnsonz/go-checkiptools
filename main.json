@@ -7,12 +7,14 @@
         "Google Inc"
     ],
     "gws":[
-        "google."
+        "google.",
+        "google.com"
     ],
     "gvs":[
         "*.c.docs.google.com",
         "*.googlevideo.com"
     ],
+    "match_ip_by_dnsname":false,
     "sort_tmpokfile":true,
     "check_last_okip":true,
     "ippool":{
