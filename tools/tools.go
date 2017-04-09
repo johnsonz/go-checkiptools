@@ -138,8 +138,7 @@ func goagent2goproxy() {
 func getInputFromCommand() string {
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
-	input = input[:len(input)-2]
-
+	input = strings.Replace(strings.Replace(input, "\n", "", -1), "\r", "", -1)
 	return input
 }
 
