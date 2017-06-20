@@ -31,6 +31,7 @@ type Config struct {
 	MatchByDNSName   bool     `json:"match_ip_by_dnsname"`
 	SortOkIP         bool     `json:"sort_tmpokfile"`
 	CheckLastOkIP    bool     `json:"check_last_okip"`
+	SoftMode         bool     `json:"soft_mode"`
 	IPPool           `json:"ippool"`
 	Bandwidth        `json:"check_bandwidth"`
 	GoProxy          `json:"write_to_goproxy"`
@@ -74,6 +75,7 @@ var separator string
 var certPool *x509.CertPool
 var tlsConfig *tls.Config
 var dialer net.Dialer
+var totalips chan string
 
 func init() {
 	fmt.Println("initial...")
@@ -96,6 +98,7 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 	var lastOkIPs []string
+	var ips []string
 	if config.CheckLastOkIP {
 		tmpLastOkIPs := getLastOkIP()
 		for _, ip := range tmpLastOkIPs {
@@ -105,10 +108,25 @@ func main() {
 		checkErr(fmt.Sprintf("truncate file %s error: ", tmpOkIPFileName), err, Error)
 	}
 
-	ips := append(lastOkIPs, getGoogleIP()...)
+	if config.SoftMode {
+		totalips = make(chan string, config.Concurrency)
+		go func() {
+			for _, ip := range lastOkIPs {
+				totalips <- ip
+			}
+			getGoogleIPQueue()
+			close(totalips)
+		}()
 
-	fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
-	time.Sleep(5 * time.Second)
+		fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()))
+		time.Sleep(5 * time.Second)
+
+	} else {
+		ips = append(lastOkIPs, getGoogleIP()...)
+
+		fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
+		time.Sleep(5 * time.Second)
+	}
 
 	jobs := make(chan string, config.Concurrency)
 	done := make(chan bool, config.Concurrency)
@@ -117,8 +135,14 @@ func main() {
 	//check all goole ip begin
 	t0 := time.Now()
 	go func() {
-		for _, ip := range ips {
-			jobs <- ip
+		if config.SoftMode {
+			for ip := range totalips {
+				jobs <- ip
+			}
+		} else {
+			for _, ip := range ips {
+				jobs <- ip
+			}
 		}
 		close(jobs)
 	}()
