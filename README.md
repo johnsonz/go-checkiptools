@@ -42,7 +42,9 @@
 
 >`"enabled":false` 默认为false，不写入
 
->`"path":""` goproxy目录，请注意目录分隔符，windows下需用`\`转义
+>`"path":""` goproxy目录，只指定目录即可，请注意目录分隔符，windows下需用`\`转义
+
+`"soft_mode":true` 边读取ip边扫描，不会再执行ip去重，适合需要扫描大量ip且内存较小的用户
 
 ## Wiki
 [Wiki](https://plumwine.me/go-checkiptools-usage-wiki/)
