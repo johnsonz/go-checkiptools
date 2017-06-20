@@ -32,6 +32,7 @@ type Config struct {
 	SortOkIP         bool     `json:"sort_tmpokfile"`
 	CheckLastOkIP    bool     `json:"check_last_okip"`
 	SoftMode         bool     `json:"soft_mode"`
+	Bell             bool     `json:"bell"`
 	IPPool           `json:"ippool"`
 	Bandwidth        `json:"check_bandwidth"`
 	GoProxy          `json:"write_to_goproxy"`
@@ -197,12 +198,15 @@ func main() {
 		writeIP2Goproxy(file, gpips)
 	}
 	fmt.Println("\npress 'Enter' to continue...")
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			fmt.Printf("%c", '\007')
-			time.Sleep(time.Second)
+
+	if config.Bell {
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 3; j++ {
+				fmt.Printf("%c", '\007')
+				time.Sleep(time.Second)
+			}
+			time.Sleep(time.Second * 3)
 		}
-		time.Sleep(time.Second * 3)
 	}
 	fmt.Scanln()
 }

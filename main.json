@@ -34,5 +34,6 @@
         "enabled":false,
         "path":""
     },
-    "soft_mode":true
+    "soft_mode":true,
+    "bell":true
 }
