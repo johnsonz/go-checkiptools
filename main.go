@@ -20,9 +20,9 @@ import (
 
 //Config Get config info from extra config.json file.
 type Config struct {
-	Concurrency      int `json:"concurrency"`
-	Timeout          int `json:"timeout"`
-	HandshakeTimeout int
+	Concurrency      int      `json:"concurrency"`
+	Timeout          int      `json:"timeout"`
+	HandshakeTimeout int      `json:"handshake_timeout"`
 	Delay            int      `json:"delay"`
 	OnlyGWSIP        bool     `json:"only_gws_ip"`
 	OrgNames         []string `json:"organization"`
@@ -81,7 +81,7 @@ var totalips chan string
 func init() {
 	fmt.Println("initial...")
 	parseConfig()
-	config.HandshakeTimeout = config.Timeout
+
 	if config.IPPool.Enabled {
 		config.Timeout = config.IPPool.Delay
 		config.HandshakeTimeout = config.IPPool.Delay
