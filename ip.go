@@ -208,6 +208,19 @@ func getGoogleIP() []string {
 	return ips
 }
 
+//get all google ip
+func getUniqueGoogleIP() map[string]string {
+	ips := make(map[string]string)
+	ipRanges := getGoogleIPRange()
+	for _, ipRange := range ipRanges {
+		for _, ip := range parseGoogleIPRange(ipRange) {
+			ips[ip] = ip
+		}
+	}
+
+	return ips
+}
+
 //get google ip one by one
 func getGoogleIPQueue() {
 	ipRanges := getGoogleIPRange()

@@ -123,7 +123,8 @@ func main() {
 		time.Sleep(5 * time.Second)
 
 	} else {
-		ips = append(lastOkIPs, getGoogleIP()...)
+		ipsExtra := convertMap2Array(getUniqueGoogleIP())
+		ips = append(lastOkIPs, ipsExtra...)
 
 		fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
 		time.Sleep(5 * time.Second)

@@ -34,3 +34,20 @@ func isFileExist(file string) bool {
 	}
 	return true
 }
+
+//convert type map[string]string to array
+func convertMap2Array(m map[string]string) (s []string) {
+	for _, v := range m {
+		s = append(s, v)
+	}
+
+	return s
+}
+
+//convert type array to map[string]string
+func convertArray2Map(s []string) (m map[string]string) {
+	for _, v := range s {
+		m[v] = v
+	}
+	return m
+}
