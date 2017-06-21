@@ -46,6 +46,7 @@ func convertMap2Array(m map[string]string) (s []string) {
 
 //convert type array to map[string]string
 func convertArray2Map(s []string) (m map[string]string) {
+	m = make(map[string]string)
 	for _, v := range s {
 		m[v] = v
 	}

@@ -99,7 +99,6 @@ func getLastOkIP() []IP {
 
 //get all google ip range from googleip.txt file
 func getGoogleIPRange() []string {
-	m := make(map[string]string)
 	var ipRanges []string
 	bytes, err := ioutil.ReadFile(googleIPFileName)
 	checkErr(fmt.Sprintf("read file %s error: ", googleIPFileName), err, Error)
@@ -109,11 +108,8 @@ func getGoogleIPRange() []string {
 		line = strings.Replace(line, "\r", "", -1)
 		line = strings.TrimSpace(line)
 		if len(line) > 1 {
-			m[line] = line
+			ipRanges = append(ipRanges, line)
 		}
-	}
-	for _, v := range m {
-		ipRanges = append(ipRanges, v)
 	}
 
 	return ipRanges
@@ -224,6 +220,7 @@ func getUniqueGoogleIP() map[string]string {
 //get google ip one by one
 func getGoogleIPQueue() {
 	ipRanges := getGoogleIPRange()
+	ipRanges = convertMap2Array(convertArray2Map(ipRanges))
 	for _, ipRange := range ipRanges {
 		parsedips := parseGoogleIPRange(ipRange)
 		for _, ip := range parsedips {
