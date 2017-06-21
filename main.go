@@ -197,7 +197,6 @@ func main() {
 		}
 		writeIP2Goproxy(file, gpips)
 	}
-	fmt.Println("\npress 'Enter' to continue...")
 
 	if config.Bell {
 		for i := 0; i < 3; i++ {
@@ -208,6 +207,7 @@ func main() {
 			time.Sleep(time.Second * 3)
 		}
 	}
+	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
 }
 
