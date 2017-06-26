@@ -59,6 +59,36 @@ func (s ByBandwidth) Less(i, j int) bool {
 	return s.IPs[i].Bandwidth < s.IPs[j].Bandwidth
 }
 
+//getGwsIP get all gws ip
+func (ips IPs) getGwsIP() (gws []IP) {
+	for _, ip := range ips {
+		if ip.ServerName == "gws" {
+			gws = append(gws, ip)
+		}
+	}
+	return gws
+}
+
+//getGvsIP get all gvs ip
+func (ips IPs) getGvsIP() (gvs []IP) {
+	for _, ip := range ips {
+		if ip.ServerName == "gvs" {
+			gvs = append(gvs, ip)
+		}
+	}
+	return gvs
+}
+
+//getIPByDelay get all ip which delay is less than specified value
+func (ips IPs) getIPByDelay(delay int) (data []IP) {
+	for _, ip := range ips {
+		if ip.Delay <= delay {
+			data = append(data, ip)
+		}
+	}
+	return data
+}
+
 //get last ok ip
 func getLastOkIP() map[string]IP {
 	m := make(map[string]IP)
