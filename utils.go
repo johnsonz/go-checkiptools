@@ -1,10 +1,6 @@
 package main
 
-import (
-	"os"
-
-	"github.com/golang/glog"
-)
+import "github.com/golang/glog"
 
 //custom log level
 const (
@@ -24,15 +20,6 @@ func checkErr(messge string, err error, level int) {
 			glog.Fatalln(messge, err)
 		}
 	}
-}
-
-//Whether file exists.
-func isFileExist(file string) bool {
-	_, err := os.Stat(file)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 //convert type map[string]string to array

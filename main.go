@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -79,9 +78,10 @@ var dialer net.Dialer
 var totalips chan string
 
 func init() {
-	fmt.Println("initial...")
-	parseConfig()
-
+	err := parseJSONConfig(configFileName)
+	if err != nil {
+		checkErr(fmt.Sprintf("parse config %s error", configFileName), err, Error)
+	}
 	if config.IPPool.Enabled {
 		config.Timeout = config.IPPool.Delay
 		config.HandshakeTimeout = config.IPPool.Delay
@@ -210,14 +210,6 @@ func main() {
 	}
 	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
-}
-
-//Parse config file
-func parseConfig() {
-	conf, err := ioutil.ReadFile(configFileName)
-	checkErr("read config file error: ", err, Error)
-	err = json.Unmarshal(conf, &config)
-	checkErr("parse config file error: ", err, Error)
 }
 
 //Load cacert.pem
