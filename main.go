@@ -101,6 +101,7 @@ func main() {
 
 	flag.Set("logtostderr", "true")
 	flag.Parse()
+
 	var lastOkIPs []string
 	var ips []string
 	if config.CheckLastOkIP {
@@ -126,8 +127,7 @@ func main() {
 		time.Sleep(5 * time.Second)
 
 	} else {
-		ipsExtra := convertMap2Array(getUniqueGoogleIP())
-		ips = append(lastOkIPs, ipsExtra...)
+		ips = append(lastOkIPs, getGoogleIP()...)
 
 		fmt.Printf("load last checked ip ok, count: %d,\nload extra ip ok, line: %d, count: %d\n\n", len(lastOkIPs), len(getGoogleIPRange()), len(ips))
 		time.Sleep(5 * time.Second)
@@ -388,7 +388,11 @@ writeJSONIP2File: sorting ip, ridding duplicate ip, generating json ip and
 bar-separated ip
 */
 func writeJSONIP2File() (gws, gvs int, gpips string) {
-	okIPs := getLastOkIP()
+	tmpOkIPs := getLastOkIP()
+	var okIPs []IP
+	for _, v := range tmpOkIPs {
+		okIPs = append(okIPs, v)
+	}
 	if config.SortOkIP {
 		sort.Sort(ByDelay{IPs(okIPs)})
 	}

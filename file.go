@@ -1,13 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 )
 
+//read file
 func readFileWithoutErr(filename string) []byte {
-	if isFileExist(filename) {
+	if !isFileExist(filename) {
 		checkErr(fmt.Sprintf("file %s does not exist", filename), nil, Error)
 	}
 	data, err := ioutil.ReadFile(filename)
@@ -17,6 +19,19 @@ func readFileWithoutErr(filename string) []byte {
 	}
 
 	return data
+}
+
+//read file
+func readFile(filename string) ([]byte, error) {
+	if !isFileExist(filename) {
+		return nil, errors.New("file does not exist")
+	}
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 //Whether file exists.

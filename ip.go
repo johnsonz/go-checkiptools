@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"strconv"
 	"strings"
@@ -61,14 +60,13 @@ func (s ByBandwidth) Less(i, j int) bool {
 }
 
 //get last ok ip
-func getLastOkIP() []IP {
+func getLastOkIP() map[string]IP {
 	m := make(map[string]IP)
 	var checkedip IP
-	var ips []IP
-	if isFileExist(tmpOkIPFileName) {
-		bytes, err := ioutil.ReadFile(tmpOkIPFileName)
-		checkErr(fmt.Sprintf("read file %s error: ", tmpOkIPFileName), err, Error)
-		lines := strings.Split(string(bytes), "\n")
+
+	data, err := readFile(tmpOkIPFileName)
+	if err == nil {
+		lines := strings.Split(string(data), "\n")
 		for _, line := range lines {
 			ipInfo := strings.Split(line, " ")
 			if len(ipInfo) == 5 || len(ipInfo) == 6 {
@@ -91,28 +89,26 @@ func getLastOkIP() []IP {
 			}
 		}
 	}
-	for _, v := range m {
-		ips = append(ips, v)
-	}
-	return ips
+
+	return m
 }
 
 //get all google ip range from googleip.txt file
-func getGoogleIPRange() []string {
-	var ipRanges []string
-	bytes, err := ioutil.ReadFile(googleIPFileName)
-	checkErr(fmt.Sprintf("read file %s error: ", googleIPFileName), err, Error)
-
-	lines := strings.Split(string(bytes), "\n")
-	for _, line := range lines {
-		line = strings.Replace(line, "\r", "", -1)
-		line = strings.TrimSpace(line)
-		if len(line) > 1 {
-			ipRanges = append(ipRanges, line)
+func getGoogleIPRange() map[string]string {
+	m := make(map[string]string)
+	data, err := readFile(googleIPFileName)
+	if err == nil {
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.Replace(line, "\r", "", -1)
+			line = strings.TrimSpace(line)
+			if len(line) > 1 {
+				m[line] = line
+			}
 		}
 	}
 
-	return ipRanges
+	return m
 }
 
 /**
@@ -197,21 +193,8 @@ func parseGoogleIPRange(ipRange string) []string {
 func getGoogleIP() []string {
 	var ips []string
 	ipRanges := getGoogleIPRange()
-	for _, ipRange := range ipRanges {
-		ips = append(ips, parseGoogleIPRange(ipRange)...)
-	}
-
-	return ips
-}
-
-//get all google ip
-func getUniqueGoogleIP() map[string]string {
-	ips := make(map[string]string)
-	ipRanges := getGoogleIPRange()
-	for _, ipRange := range ipRanges {
-		for _, ip := range parseGoogleIPRange(ipRange) {
-			ips[ip] = ip
-		}
+	for _, v := range ipRanges {
+		ips = append(ips, parseGoogleIPRange(v)...)
 	}
 
 	return ips
@@ -220,9 +203,8 @@ func getUniqueGoogleIP() map[string]string {
 //get google ip one by one
 func getGoogleIPQueue() {
 	ipRanges := getGoogleIPRange()
-	ipRanges = convertMap2Array(convertArray2Map(ipRanges))
-	for _, ipRange := range ipRanges {
-		parsedips := parseGoogleIPRange(ipRange)
+	for _, v := range ipRanges {
+		parsedips := parseGoogleIPRange(v)
 		for _, ip := range parsedips {
 			totalips <- ip
 		}
