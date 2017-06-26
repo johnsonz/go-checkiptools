@@ -86,7 +86,10 @@ func init() {
 		config.Timeout = config.IPPool.Delay
 		config.HandshakeTimeout = config.IPPool.Delay
 	}
-	loadCertPem()
+	certPool, err = loadCert(certFileName)
+	if err != nil {
+		checkErr(fmt.Sprintf("load cert %s error", certFileName), err, Error)
+	}
 	createFile()
 	tlsConfig = &tls.Config{
 		RootCAs:            certPool,
@@ -210,16 +213,6 @@ func main() {
 	}
 	fmt.Println("\npress 'Enter' to continue...")
 	fmt.Scanln()
-}
-
-//Load cacert.pem
-func loadCertPem() {
-	certpem, err := ioutil.ReadFile(certFileName)
-	checkErr(fmt.Sprintf("read pem file %s error: ", certFileName), err, Error)
-	certPool = x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(certpem) {
-		checkErr(fmt.Sprintf("load pem file %s error: ", certFileName), errors.New("load pem file error"), Error)
-	}
 }
 
 func checkIP(ip string, done chan bool, maxNum chan<- bool) {
