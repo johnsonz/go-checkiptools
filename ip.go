@@ -89,6 +89,35 @@ func (ips IPs) getIPByDelay(delay int) (data []IP) {
 	return data
 }
 
+//getJSONIP generate comma-separated json ip
+func (ips IPs) getJSONIP() (s string) {
+	var b bytes.Buffer
+	for _, ip := range ips {
+		b.WriteString("\"")
+		b.WriteString(ip.Address)
+		b.WriteString("\",")
+	}
+	s = b.String()
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
+//getGOAIP generate bar-separated ip
+func (ips IPs) getGOAIP() (s string) {
+	var b bytes.Buffer
+	for _, ip := range ips {
+		b.WriteString(ip.Address)
+		b.WriteString("|")
+	}
+	s = b.String()
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
 //get last ok ip
 func getLastOkIP() map[string]IP {
 	m := make(map[string]IP)
