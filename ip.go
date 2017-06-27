@@ -98,8 +98,8 @@ func (ips IPs) getJSONIP() (s string) {
 		b.WriteString("\",")
 	}
 	s = b.String()
-	if len(s) > 0 {
-		s = s[:len(s)-1]
+	if strings.HasSuffix(s, ",") {
+		s = strings.TrimSuffix(s, ",")
 	}
 	return s
 }
@@ -112,8 +112,8 @@ func (ips IPs) getGOAIP() (s string) {
 		b.WriteString("|")
 	}
 	s = b.String()
-	if len(s) > 0 {
-		s = s[:len(s)-1]
+	if strings.HasSuffix(s, "|") {
+		s = strings.TrimSuffix(s, "|")
 	}
 	return s
 }
