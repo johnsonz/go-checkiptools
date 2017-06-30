@@ -43,3 +43,32 @@ func isFileExist(file string) bool {
 
 	return true
 }
+
+//write content to related file
+func appendFile(filename, content string) error {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err = f.WriteString(content); err != nil {
+		return err
+	}
+	f.Close()
+
+	return nil
+}
+
+func witeFile(filename, content string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := f.WriteString(content); err != nil {
+		return err
+	}
+	f.Close()
+
+	return nil
+}
