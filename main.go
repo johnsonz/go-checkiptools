@@ -219,6 +219,7 @@ func checkIP(ip string, done chan bool, maxNum chan<- bool) {
 	defer func() {
 		<-done
 	}()
+
 	var checkedip IP
 	checkedip.Address = ip
 	checkedip.Bandwidth = 0
@@ -358,17 +359,13 @@ OK:
 
 //append ip to related file
 func appendIP2File(checkedip IP, filename string) {
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	checkErr(fmt.Sprintf("open file %s error: ", filename), err, Error)
-	defer f.Close()
-
 	ipInfo := fmt.Sprintf("%s %dms %s %s %s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName)
 	if config.Bandwidth.Enabled {
 		ipInfo = fmt.Sprintf("%s %dms %s %s %s %dKB/s\n", checkedip.Address, checkedip.Delay, checkedip.CommonName, checkedip.ServerName, checkedip.CountryName, checkedip.Bandwidth)
 	}
-	_, err = f.WriteString(ipInfo)
-	checkErr(fmt.Sprintf("append ip to file %s error: ", filename), err, Error)
-	f.Close()
+	if err := appendFile(filename, ipInfo); err != nil {
+		checkErr(fmt.Sprintf("write ip to file %s error: ", filename), err, Error)
+	}
 }
 
 //Create files if they donnot exist, or truncate them.
@@ -389,6 +386,7 @@ bar-separated ip
 */
 func writeJSONIP2File() (gws, gvs int, gpips string) {
 	tmpOkIPs := getLastOkIP()
+
 	var okIPs []IP
 	for _, v := range tmpOkIPs {
 		okIPs = append(okIPs, v)

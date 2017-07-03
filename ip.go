@@ -29,6 +29,11 @@ const (
 //IPs []IP
 type IPs []IP
 
+//IPS struct
+type IPS struct {
+	IPs
+}
+
 //Len return the length of []IP
 func (ips IPs) Len() int {
 	return len(ips)
@@ -60,8 +65,8 @@ func (s ByBandwidth) Less(i, j int) bool {
 }
 
 //getGwsIP get all gws ip
-func (ips IPs) getGwsIP() (gws []IP) {
-	for _, ip := range ips {
+func (ips IPS) getGwsIP() (gws []IP) {
+	for _, ip := range ips.IPs {
 		if ip.ServerName == "gws" {
 			gws = append(gws, ip)
 		}
@@ -70,8 +75,8 @@ func (ips IPs) getGwsIP() (gws []IP) {
 }
 
 //getGvsIP get all gvs ip
-func (ips IPs) getGvsIP() (gvs []IP) {
-	for _, ip := range ips {
+func (ips IPS) getGvsIP() (gvs []IP) {
+	for _, ip := range ips.IPs {
 		if ip.ServerName == "gvs" {
 			gvs = append(gvs, ip)
 		}
@@ -80,8 +85,8 @@ func (ips IPs) getGvsIP() (gvs []IP) {
 }
 
 //getIPByDelay get all ip which delay is less than specified value
-func (ips IPs) getIPByDelay(delay int) (data []IP) {
-	for _, ip := range ips {
+func (ips IPS) getIPByDelay(delay int) (data []IP) {
+	for _, ip := range ips.IPs {
 		if ip.Delay <= delay {
 			data = append(data, ip)
 		}
@@ -90,9 +95,9 @@ func (ips IPs) getIPByDelay(delay int) (data []IP) {
 }
 
 //getJSONIP generate comma-separated json ip
-func (ips IPs) getJSONIP() (s string) {
+func (ips IPS) getJSONIP() (s string) {
 	var b bytes.Buffer
-	for _, ip := range ips {
+	for _, ip := range ips.IPs {
 		b.WriteString("\"")
 		b.WriteString(ip.Address)
 		b.WriteString("\",")
@@ -105,9 +110,9 @@ func (ips IPs) getJSONIP() (s string) {
 }
 
 //getGOAIP generate bar-separated ip
-func (ips IPs) getGOAIP() (s string) {
+func (ips IPS) getGOAIP() (s string) {
 	var b bytes.Buffer
-	for _, ip := range ips {
+	for _, ip := range ips.IPs {
 		b.WriteString(ip.Address)
 		b.WriteString("|")
 	}
