@@ -479,7 +479,7 @@ func writeJSONIP2File() (gws, gvs int, gpips string) {
 
 	err = ioutil.WriteFile(jsonIPFileName, []byte(gaips+"\n"+gpips), 0755)
 	checkErr(fmt.Sprintf("write ip to file %s error: ", jsonIPFileName), err, Error)
-	if config.GoProxy.OneIPPerLine {
+	if config.GoProxy.Enabled && config.GoProxy.OneIPPerLine {
 		gpips = strings.Replace(gpips, ",\"", ",\r\n\t\t\t\"", -1)
 	}
 	return gws, gvs, gpips
