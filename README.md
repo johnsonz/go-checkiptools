@@ -44,6 +44,8 @@
 
 >`"path":""` goproxy目录，只指定目录即可，请注意目录分隔符，windows下需用`\`转义
 
+>`"one_ip_per_line":true` 每行一个ip
+
 `"soft_mode":true` 边读取ip边扫描，不会再执行ip去重，适合需要扫描大量ip且内存较小的用户
 
 ## Wiki
