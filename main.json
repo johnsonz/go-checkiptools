@@ -33,7 +33,8 @@
     "check_http2":false,
     "write_to_goproxy":{
         "enabled":false,
-        "path":""
+        "path":"",
+        "one_ip_per_line":true
     },
     "soft_mode":true,
     "bell":false

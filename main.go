@@ -56,8 +56,9 @@ type Bandwidth struct {
 
 //GoProxy write ip to goproxy config
 type GoProxy struct {
-	Enabled bool   `json:"enabled"`
-	Path    string `json:"path"`
+	Enabled      bool   `json:"enabled"`
+	Path         string `json:"path"`
+	OneIPPerLine bool   `json:"one_ip_per_line"`
 }
 
 const (
@@ -98,6 +99,7 @@ func main() {
 
 	flag.Set("logtostderr", "true")
 	flag.Parse()
+
 	var lastOkIPs []string
 	var ips []string
 	if config.CheckLastOkIP {
@@ -476,7 +478,9 @@ func writeJSONIP2File() (gws, gvs int, gpips string) {
 	}
 	err = ioutil.WriteFile(jsonIPFileName, []byte(gaips+"\n"+gpips), 0755)
 	checkErr(fmt.Sprintf("write ip to file %s error: ", jsonIPFileName), err, Error)
-
+	if config.GoProxy.OneIPPerLine {
+		gpips = strings.Replace(gpips, ",\"", ",\r\n\t\t\t\"", -1)
+	}
 	return gws, gvs, gpips
 }
 
